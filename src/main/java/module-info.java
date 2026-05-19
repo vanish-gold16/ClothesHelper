@@ -1,5 +1,5 @@
 module com.example.clotheshelper {
-    requires javafx.graphics;
+    requires javafx.controls;
 
     exports com.example.clotheshelper;
 }
