@@ -18,16 +18,22 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class AppRoot extends BorderPane {
+    private static final double NAVIGATION_HEIGHT = 64;
+
     private static final String DEFAULT_BUTTON_STYLE = "-fx-background-color: transparent;"
             + "-fx-text-fill: #4b5563;"
             + "-fx-font-size: 14px;"
             + "-fx-padding: 12 16;"
+            + "-fx-background-insets: 0;"
+            + "-fx-border-width: 0;"
             + "-fx-background-radius: 0;";
 
     private static final String ACTIVE_BUTTON_STYLE = "-fx-background-color: #2563eb;"
             + "-fx-text-fill: white;"
             + "-fx-font-size: 14px;"
             + "-fx-padding: 12 16;"
+            + "-fx-background-insets: 0;"
+            + "-fx-border-width: 0;"
             + "-fx-background-radius: 0;";
 
     private final StackPane pageContainer = new StackPane();
@@ -52,6 +58,9 @@ public class AppRoot extends BorderPane {
     private HBox createNavigation() {
         HBox navigation = new HBox();
         navigation.setAlignment(Pos.CENTER);
+        navigation.setFillHeight(true);
+        navigation.setMinHeight(NAVIGATION_HEIGHT);
+        navigation.setPrefHeight(NAVIGATION_HEIGHT);
         navigation.setPadding(new Insets(0));
         navigation.setStyle("-fx-background-color: #f3f4f6; -fx-border-color: #d1d5db; -fx-border-width: 1 0 0 0;");
 
@@ -67,6 +76,9 @@ public class AppRoot extends BorderPane {
     private void createNavigationButton(HBox navigation, String pageName, boolean hasPlusIcon) {
         Button button = new Button(pageName);
         button.setMaxWidth(Double.MAX_VALUE);
+        button.setMinHeight(NAVIGATION_HEIGHT);
+        button.setPrefHeight(NAVIGATION_HEIGHT);
+        button.setMaxHeight(Double.MAX_VALUE);
         button.setStyle(DEFAULT_BUTTON_STYLE);
         button.setOnAction(event -> selectPage(pageName));
 
