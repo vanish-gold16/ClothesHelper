@@ -7,4 +7,7 @@ public record StoredClothingItem(
         Path itemJsonPath,
         Path photoPath
 ) {
+    public boolean hasPhoto() {
+        return photoPath != null;
+    }
 }

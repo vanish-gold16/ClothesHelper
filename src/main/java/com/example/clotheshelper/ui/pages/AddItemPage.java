@@ -267,11 +267,6 @@ public class AddItemPage extends ScrollPane {
     }
 
     private void saveItem() {
-        if (selectedPhotoFile == null) {
-            setSaveStatus("Choose a photo before saving.", true);
-            return;
-        }
-
         ClothingItemDraft draft = new ClothingItemDraft(
                 nameField.getText(),
                 clothingTypeField.getValue(),
@@ -282,14 +277,17 @@ public class AddItemPage extends ScrollPane {
                 wearOccasionField.getValue(),
                 vibeField.getValue(),
                 notesField.getText(),
-                selectedPhotoFile.toPath()
+                selectedPhotoFile == null ? null : selectedPhotoFile.toPath()
         );
 
         try {
             StoredClothingItem storedItem = memoryStore.save(draft);
+            String photoMessage = storedItem.hasPhoto()
+                    ? " with photo " + memoryStore.toProjectRelativePath(storedItem.photoPath())
+                    : " without a photo";
             setSaveStatus(
                     "Saved to " + memoryStore.toProjectRelativePath(storedItem.itemJsonPath())
-                            + " with photo " + memoryStore.toProjectRelativePath(storedItem.photoPath()) + ".",
+                            + photoMessage + ".",
                     false
             );
         } catch (IOException exception) {

@@ -1,6 +1,7 @@
 package com.example.clotheshelper.ui;
 
 import com.example.clotheshelper.ui.pages.AddItemPage;
+import com.example.clotheshelper.ui.pages.LibraryPage;
 import com.example.clotheshelper.ui.pages.SimplePage;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -49,7 +50,7 @@ public class AppRoot extends BorderPane {
 
     private void createPages(Stage owner) {
         pages.put("Home", new SimplePage("Home", "This will be the main screen of the app."));
-        pages.put("Library", new SimplePage("Library", "Your clothing library will appear here."));
+        pages.put("Library", new LibraryPage());
         pages.put("Add", new AddItemPage(owner));
         pages.put("Settings", new SimplePage("Settings", "App settings will appear here."));
         pages.put("Profile", new SimplePage("Profile", "Your profile information will appear here."));
@@ -99,6 +100,10 @@ public class AppRoot extends BorderPane {
         Node page = pages.get(pageName);
         if (page == null) {
             return;
+        }
+
+        if (page instanceof LibraryPage libraryPage) {
+            libraryPage.refreshItems();
         }
 
         pageContainer.getChildren().setAll(page);
