@@ -5,7 +5,9 @@ import com.example.clotheshelper.storage.SavedClothingItem;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.image.Image;
@@ -20,6 +22,7 @@ import javafx.scene.layout.VBox;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.List;
+import java.util.Optional;
 
 public class LibraryPage extends ScrollPane {
     private static final String CARD_STYLE = "-fx-background-color: #ffffff;"
@@ -114,7 +117,7 @@ public class LibraryPage extends ScrollPane {
         addDetail(details, "Vibe", item.vibe());
         addDetail(details, "Notes", item.notes());
 
-        VBox card = new VBox(12, createPreview(item), title, details);
+        VBox card = new VBox(12, createPreview(item), title, details, createDeleteButton(item));
         card.setAlignment(Pos.TOP_LEFT);
         card.setPadding(new Insets(14));
         card.setPrefWidth(220);
@@ -156,6 +159,42 @@ public class LibraryPage extends ScrollPane {
                 + "-fx-background-radius: 8;");
         preview.getChildren().add(placeholderLabel);
         return preview;
+    }
+
+    private Button createDeleteButton(SavedClothingItem item) {
+        Button deleteButton = new Button("Delete");
+        deleteButton.setMaxWidth(Double.MAX_VALUE);
+        deleteButton.setStyle("-fx-background-color: #fee2e2;"
+                + "-fx-text-fill: #991b1b;"
+                + "-fx-font-size: 13px;"
+                + "-fx-padding: 8 12;"
+                + "-fx-background-radius: 6;");
+        deleteButton.setOnAction(event -> deleteItem(item));
+        return deleteButton;
+    }
+
+    private void deleteItem(SavedClothingItem item) {
+        String title = createItemTitle(item);
+        Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION);
+        confirmation.setTitle("Delete item");
+        confirmation.setHeaderText("Delete " + title + "?");
+        confirmation.setContentText("This will remove the saved item and its local photo, if it has one.");
+
+        Optional<ButtonType> result = confirmation.showAndWait();
+        if (result.isEmpty() || result.get() != ButtonType.OK) {
+            return;
+        }
+
+        try {
+            memoryStore.delete(item.id());
+            refreshItems();
+        } catch (IOException exception) {
+            Alert error = new Alert(Alert.AlertType.ERROR);
+            error.setTitle("Delete failed");
+            error.setHeaderText("Could not delete " + title);
+            error.setContentText(exception.getMessage());
+            error.showAndWait();
+        }
     }
 
     private VBox createEmptyState() {

@@ -5,6 +5,7 @@ import com.example.clotheshelper.enums.MainColor;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.Instant;
@@ -84,6 +85,13 @@ public class ClothingMemoryStore {
         return items;
     }
 
+    public boolean delete(String itemId) throws IOException {
+        String safeItemId = requireSafeItemId(itemId);
+        boolean removedFromCatalog = removeCatalogEntry(safeItemId);
+        deleteItemDirectory(safeItemId);
+        return removedFromCatalog;
+    }
+
     private static Path resolveProjectRoot() {
         Path currentDirectory = Path.of(System.getProperty("user.dir")).toAbsolutePath().normalize();
         for (Path directory = currentDirectory; directory != null; directory = directory.getParent()) {
@@ -104,6 +112,70 @@ public class ClothingMemoryStore {
             return itemPath.normalize();
         }
         return projectRoot.resolve(itemPath).normalize();
+    }
+
+    private String requireSafeItemId(String itemId) throws IOException {
+        if (itemId == null || itemId.isBlank()) {
+            throw new IOException("Item id is empty");
+        }
+
+        String trimmedItemId = itemId.trim();
+        if (!trimmedItemId.matches("[A-Za-z0-9._-]+")) {
+            throw new IOException("Item id contains unsupported characters: " + itemId);
+        }
+        return trimmedItemId;
+    }
+
+    private boolean removeCatalogEntry(String itemId) throws IOException {
+        Path catalogPath = memoryRoot.resolve("catalog.json");
+        if (Files.notExists(catalogPath)) {
+            return false;
+        }
+
+        Object catalogJson = JsonParser.parse(Files.readString(catalogPath, StandardCharsets.UTF_8));
+        if (!(catalogJson instanceof List<?> catalogEntries)) {
+            throw new IOException("Catalog file is not a JSON array: " + catalogPath);
+        }
+
+        List<Object> updatedEntries = new ArrayList<>();
+        boolean removed = false;
+        for (Object catalogEntry : catalogEntries) {
+            if (catalogEntry instanceof Map<?, ?> catalogItem && itemId.equals(textValue(catalogItem, "id"))) {
+                removed = true;
+                continue;
+            }
+            updatedEntries.add(catalogEntry);
+        }
+
+        if (removed) {
+            Files.writeString(catalogPath, JsonWriter.write(updatedEntries), StandardCharsets.UTF_8);
+        }
+        return removed;
+    }
+
+    private void deleteItemDirectory(String itemId) throws IOException {
+        Path itemsRoot = memoryRoot.resolve("items").normalize();
+        Path itemDirectory = itemsRoot.resolve(itemId).normalize();
+        if (!itemDirectory.startsWith(itemsRoot)) {
+            throw new IOException("Refusing to delete outside memory items directory: " + itemDirectory);
+        }
+
+        deleteRecursively(itemDirectory);
+    }
+
+    private void deleteRecursively(Path path) throws IOException {
+        if (Files.notExists(path)) {
+            return;
+        }
+
+        if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
+            try (var children = Files.newDirectoryStream(path)) {
+                for (Path child : children) {
+                    deleteRecursively(child);
+                }
+            }
+        }
+        Files.deleteIfExists(path);
     }
 
     private SavedClothingItem loadItem(Map<?, ?> catalogItem) throws IOException {
@@ -585,6 +657,109 @@ public class ClothingMemoryStore {
 
         private IOException error(String message) {
             return new IOException(message + " at character " + index);
+        }
+    }
+
+    private static class JsonWriter {
+        static String write(Object value) {
+            StringBuilder json = new StringBuilder();
+            appendValue(json, value, 0);
+            json.append('\n');
+            return json.toString();
+        }
+
+        private static void appendValue(StringBuilder json, Object value, int indentLevel) {
+            if (value == null) {
+                json.append("null");
+                return;
+            }
+            if (value instanceof String text) {
+                appendString(json, text);
+                return;
+            }
+            if (value instanceof Number || value instanceof Boolean) {
+                json.append(value);
+                return;
+            }
+            if (value instanceof Map<?, ?> object) {
+                appendObject(json, object, indentLevel);
+                return;
+            }
+            if (value instanceof List<?> array) {
+                appendArray(json, array, indentLevel);
+                return;
+            }
+
+            appendString(json, value.toString());
+        }
+
+        private static void appendObject(StringBuilder json, Map<?, ?> object, int indentLevel) {
+            if (object.isEmpty()) {
+                json.append("{}");
+                return;
+            }
+
+            json.append("{\n");
+            int index = 0;
+            for (Map.Entry<?, ?> entry : object.entrySet()) {
+                appendIndent(json, indentLevel + 1);
+                appendString(json, String.valueOf(entry.getKey()));
+                json.append(": ");
+                appendValue(json, entry.getValue(), indentLevel + 1);
+                if (++index < object.size()) {
+                    json.append(',');
+                }
+                json.append('\n');
+            }
+            appendIndent(json, indentLevel);
+            json.append('}');
+        }
+
+        private static void appendArray(StringBuilder json, List<?> array, int indentLevel) {
+            if (array.isEmpty()) {
+                json.append("[]");
+                return;
+            }
+
+            json.append("[\n");
+            for (int index = 0; index < array.size(); index++) {
+                appendIndent(json, indentLevel + 1);
+                appendValue(json, array.get(index), indentLevel + 1);
+                if (index < array.size() - 1) {
+                    json.append(',');
+                }
+                json.append('\n');
+            }
+            appendIndent(json, indentLevel);
+            json.append(']');
+        }
+
+        private static void appendString(StringBuilder json, String value) {
+            json.append('"');
+            for (int index = 0; index < value.length(); index++) {
+                char character = value.charAt(index);
+                switch (character) {
+                    case '"' -> json.append("\\\"");
+                    case '\\' -> json.append("\\\\");
+                    case '\b' -> json.append("\\b");
+                    case '\f' -> json.append("\\f");
+                    case '\n' -> json.append("\\n");
+                    case '\r' -> json.append("\\r");
+                    case '\t' -> json.append("\\t");
+                    default -> {
+                        if (character < 0x20) {
+                            json.append(String.format("\\u%04x", (int) character));
+                        } else {
+                            json.append(character);
+                        }
+                    }
+                }
+            }
+            json.append('"');
+        }
+
+        private static void appendIndent(StringBuilder json, int indentLevel) {
+            json.append("  ".repeat(indentLevel));
         }
     }
 }
