@@ -7,7 +7,8 @@ public enum Seasons {
     WARM,
     RAINY,
     COZY,
-    FREEZING;
+    FREEZING,
+    ANY;
 
     @Override
     public String toString() {

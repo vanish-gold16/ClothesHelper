@@ -6,7 +6,8 @@ public enum WearOccasion {
     EVERYDAY,
     SPORT,
     SPECIAL,
-    FORMAL;
+    FORMAL,
+    ANY;
 
     @Override
     public String toString() {

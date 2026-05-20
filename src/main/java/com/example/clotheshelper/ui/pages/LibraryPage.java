@@ -99,7 +99,7 @@ public class LibraryPage extends ScrollPane {
     }
 
     private VBox createItemCard(SavedClothingItem item) {
-        Label title = new Label(firstText(item.name(), item.clothingType(), "Unnamed item"));
+        Label title = new Label(createItemTitle(item));
         title.setMaxWidth(Double.MAX_VALUE);
         title.setWrapText(true);
         title.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #111827;");
@@ -184,6 +184,13 @@ public class LibraryPage extends ScrollPane {
         detail.setWrapText(true);
         detail.setStyle(MUTED_TEXT_STYLE);
         details.getChildren().add(detail);
+    }
+
+    private String createItemTitle(SavedClothingItem item) {
+        String brand = item.brand() == null ? "" : item.brand().trim();
+        String name = item.name() == null ? "" : item.name().trim();
+        String title = (brand + " " + name).trim();
+        return firstText(title, item.clothingType(), "Unnamed item");
     }
 
     private String firstText(String first, String second) {
