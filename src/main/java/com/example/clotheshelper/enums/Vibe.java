@@ -4,9 +4,9 @@ import java.util.Locale;
 
 public enum Vibe {
     CASUAL,
-    MINIMAL,
     ELEGANT,
     STREETWEAR,
+    SHINE,
     SPORTY,
     COZY;
 

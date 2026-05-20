@@ -1,5 +1,6 @@
 package com.example.clotheshelper.ui.pages;
 
+import com.example.clotheshelper.enums.ClothingType;
 import com.example.clotheshelper.enums.MainColor;
 import com.example.clotheshelper.enums.Seasons;
 import com.example.clotheshelper.enums.Vibe;
@@ -129,7 +130,7 @@ public class AddItemPage extends ScrollPane {
         fields.getColumnConstraints().setAll(createColumn(), createColumn());
 
         addFullWidthField(fields, 0, "Name", createTextField("Item name"));
-        addField(fields, 1, 0, "Clothing type", createTextField("T-shirt, jacket, shoes..."));
+        addField(fields, 1, 0, "Clothing type", createEnumComboBox(ClothingType.values(), "Select clothing type"));
         addField(fields, 1, 1, "Brand", createTextField("Brand"));
         addField(fields, 2, 0, "Size", createTextField("Size"));
         addField(fields, 2, 1, "Season", createEnumComboBox(Seasons.values(), "Select season"));
