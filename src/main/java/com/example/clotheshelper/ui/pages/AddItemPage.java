@@ -5,6 +5,9 @@ import com.example.clotheshelper.enums.MainColor;
 import com.example.clotheshelper.enums.Seasons;
 import com.example.clotheshelper.enums.Vibe;
 import com.example.clotheshelper.enums.WearOccasion;
+import com.example.clotheshelper.storage.ClothingItemDraft;
+import com.example.clotheshelper.storage.ClothingMemoryStore;
+import com.example.clotheshelper.storage.StoredClothingItem;
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -29,6 +32,7 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 import java.io.File;
+import java.io.IOException;
 
 public class AddItemPage extends ScrollPane {
     private static final String CARD_STYLE = "-fx-background-color: #ffffff;"
@@ -44,6 +48,20 @@ public class AddItemPage extends ScrollPane {
     private final ImageView photoView = new ImageView();
     private final StackPane photoPreview = new StackPane();
     private final Label selectedPhotoLabel = new Label();
+    private final Label saveStatusLabel = new Label();
+    private final ClothingMemoryStore memoryStore = new ClothingMemoryStore();
+
+    private final TextField nameField = createTextField("Item name");
+    private final ComboBox<ClothingType> clothingTypeField = createEnumComboBox(ClothingType.values(), "Select clothing type");
+    private final TextField brandField = createTextField("Brand");
+    private final TextField sizeField = createTextField("Size");
+    private final ComboBox<Seasons> seasonField = createEnumComboBox(Seasons.values(), "Select season");
+    private final ComboBox<MainColor> mainColorField = createMainColorComboBox();
+    private final ComboBox<WearOccasion> wearOccasionField = createEnumComboBox(WearOccasion.values(), "Select occasion");
+    private final ComboBox<Vibe> vibeField = createEnumComboBox(Vibe.values(), "Select vibe");
+    private final TextArea notesField = createNotesField();
+
+    private File selectedPhotoFile;
 
     public AddItemPage(Stage owner) {
         this.owner = owner;
@@ -129,17 +147,29 @@ public class AddItemPage extends ScrollPane {
         fields.setVgap(12);
         fields.getColumnConstraints().setAll(createColumn(), createColumn());
 
-        addFullWidthField(fields, 0, "Name", createTextField("Item name"));
-        addField(fields, 1, 0, "Clothing type", createEnumComboBox(ClothingType.values(), "Select clothing type"));
-        addField(fields, 1, 1, "Brand", createTextField("Brand"));
-        addField(fields, 2, 0, "Size", createTextField("Size"));
-        addField(fields, 2, 1, "Season", createEnumComboBox(Seasons.values(), "Select season"));
-        addField(fields, 3, 0, "Main color", createMainColorComboBox());
-        addField(fields, 3, 1, "Where to wear it", createEnumComboBox(WearOccasion.values(), "Select occasion"));
-        addFullWidthField(fields, 4, "Vibe", createEnumComboBox(Vibe.values(), "Select vibe"));
-        addFullWidthField(fields, 5, "Notes", createNotesField());
+        addFullWidthField(fields, 0, "Name", nameField);
+        addField(fields, 1, 0, "Clothing type", clothingTypeField);
+        addField(fields, 1, 1, "Brand", brandField);
+        addField(fields, 2, 0, "Size", sizeField);
+        addField(fields, 2, 1, "Season", seasonField);
+        addField(fields, 3, 0, "Main color", mainColorField);
+        addField(fields, 3, 1, "Where to wear it", wearOccasionField);
+        addFullWidthField(fields, 4, "Vibe", vibeField);
+        addFullWidthField(fields, 5, "Notes", notesField);
 
-        VBox card = new VBox(16, cardTitle, fields);
+        Button saveButton = new Button("Save item");
+        saveButton.setMaxWidth(Double.MAX_VALUE);
+        saveButton.setStyle("-fx-background-color: #16a34a;"
+                + "-fx-text-fill: white;"
+                + "-fx-font-size: 14px;"
+                + "-fx-padding: 10 16;"
+                + "-fx-background-radius: 6;");
+        saveButton.setOnAction(event -> saveItem());
+
+        saveStatusLabel.setWrapText(true);
+        saveStatusLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #6b7280;");
+
+        VBox card = new VBox(16, cardTitle, fields, saveButton, saveStatusLabel);
         card.setAlignment(Pos.TOP_LEFT);
         card.setPadding(new Insets(18));
         card.setStyle(CARD_STYLE);
@@ -227,11 +257,49 @@ public class AddItemPage extends ScrollPane {
 
         File selectedFile = fileChooser.showOpenDialog(owner);
         if (selectedFile != null) {
+            selectedPhotoFile = selectedFile;
             Image image = new Image(selectedFile.toURI().toString(), 220, 220, true, true);
             photoView.setImage(image);
             photoPreview.getChildren().setAll(photoView);
             selectedPhotoLabel.setText(selectedFile.getName());
+            setSaveStatus("Photo selected. Fill the details and save the item.", false);
         }
+    }
+
+    private void saveItem() {
+        if (selectedPhotoFile == null) {
+            setSaveStatus("Choose a photo before saving.", true);
+            return;
+        }
+
+        ClothingItemDraft draft = new ClothingItemDraft(
+                nameField.getText(),
+                clothingTypeField.getValue(),
+                brandField.getText(),
+                sizeField.getText(),
+                seasonField.getValue(),
+                mainColorField.getValue(),
+                wearOccasionField.getValue(),
+                vibeField.getValue(),
+                notesField.getText(),
+                selectedPhotoFile.toPath()
+        );
+
+        try {
+            StoredClothingItem storedItem = memoryStore.save(draft);
+            setSaveStatus(
+                    "Saved to " + memoryStore.toProjectRelativePath(storedItem.itemJsonPath())
+                            + " with photo " + memoryStore.toProjectRelativePath(storedItem.photoPath()) + ".",
+                    false
+            );
+        } catch (IOException exception) {
+            setSaveStatus("Could not save item: " + exception.getMessage(), true);
+        }
+    }
+
+    private void setSaveStatus(String text, boolean isError) {
+        saveStatusLabel.setText(text);
+        saveStatusLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: " + (isError ? "#dc2626" : "#047857") + ";");
     }
 
     private static class MainColorCell extends ListCell<MainColor> {
