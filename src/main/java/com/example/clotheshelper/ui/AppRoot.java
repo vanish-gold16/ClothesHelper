@@ -1,6 +1,8 @@
 package com.example.clotheshelper.ui;
 
+import com.example.clotheshelper.storage.SavedClothingItem;
 import com.example.clotheshelper.ui.pages.AddItemPage;
+import com.example.clotheshelper.ui.pages.EditItemPage;
 import com.example.clotheshelper.ui.pages.LibraryPage;
 import com.example.clotheshelper.ui.pages.SimplePage;
 import javafx.geometry.Insets;
@@ -40,6 +42,7 @@ public class AppRoot extends BorderPane {
     private final StackPane pageContainer = new StackPane();
     private final Map<String, Node> pages = new LinkedHashMap<>();
     private final Map<String, Button> navigationButtons = new LinkedHashMap<>();
+    private LibraryPage libraryPage;
 
     public AppRoot(Stage owner) {
         setCenter(pageContainer);
@@ -50,10 +53,23 @@ public class AppRoot extends BorderPane {
 
     private void createPages(Stage owner) {
         pages.put("Home", new SimplePage("Home", "This will be the main screen of the app."));
-        pages.put("Library", new LibraryPage());
+        libraryPage = new LibraryPage(item -> showEditPage(owner, item));
+        pages.put("Library", libraryPage);
         pages.put("Add", new AddItemPage(owner));
         pages.put("Settings", new SimplePage("Settings", "App settings will appear here."));
         pages.put("Profile", new SimplePage("Profile", "Your profile information will appear here."));
+    }
+
+    private void showEditPage(Stage owner, SavedClothingItem item) {
+        EditItemPage editItemPage = new EditItemPage(owner, item, () -> selectPage("Library"), this::refreshLibrary);
+        pageContainer.getChildren().setAll(editItemPage);
+        updateNavigation("Library");
+    }
+
+    private void refreshLibrary() {
+        if (libraryPage != null) {
+            libraryPage.refreshItems();
+        }
     }
 
     private HBox createNavigation() {

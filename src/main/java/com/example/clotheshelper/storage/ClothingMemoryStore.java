@@ -50,7 +50,7 @@ public class ClothingMemoryStore {
         Path itemJsonPath = itemDirectory.resolve("item.json");
         Files.writeString(
                 itemJsonPath,
-                buildItemJson(draft, id, createdAt, itemJsonPath, photoPath),
+                buildItemJson(draft, id, createdAt.toString(), itemJsonPath, photoPath),
                 StandardCharsets.UTF_8
         );
         appendCatalogEntry(draft, id, createdAt, itemJsonPath, photoPath);
@@ -81,8 +81,32 @@ public class ClothingMemoryStore {
             }
         }
 
-        items.sort(Comparator.comparing(SavedClothingItem::createdAt, Comparator.nullsLast(String::compareTo)).reversed());
+        items.sort(Comparator.comparing(SavedClothingItem::createdAt, Comparator.nullsLast(Comparator.reverseOrder())));
         return items;
+    }
+
+    public StoredClothingItem update(String itemId, ClothingItemDraft draft) throws IOException {
+        String safeItemId = requireSafeItemId(itemId);
+        SavedClothingItem existingItem = findItem(safeItemId);
+        if (existingItem == null) {
+            throw new IOException("Item not found: " + safeItemId);
+        }
+
+        Path itemDirectory = resolveItemDirectory(safeItemId);
+        Files.createDirectories(itemDirectory);
+
+        Path itemJsonPath = itemDirectory.resolve("item.json");
+        Path photoPath = updatePhoto(draft, itemDirectory, existingItem.photoPath());
+        String createdAt = firstText(existingItem.createdAt(), Instant.now().toString());
+
+        Files.writeString(
+                itemJsonPath,
+                buildItemJson(draft, safeItemId, createdAt, itemJsonPath, photoPath),
+                StandardCharsets.UTF_8
+        );
+        replaceCatalogEntry(draft, safeItemId, createdAt, itemJsonPath, photoPath);
+
+        return new StoredClothingItem(safeItemId, itemJsonPath, photoPath);
     }
 
     public boolean delete(String itemId) throws IOException {
@@ -126,6 +150,24 @@ public class ClothingMemoryStore {
         return trimmedItemId;
     }
 
+    private SavedClothingItem findItem(String itemId) throws IOException {
+        for (SavedClothingItem item : loadAll()) {
+            if (itemId.equals(item.id())) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    private Path resolveItemDirectory(String itemId) throws IOException {
+        Path itemsRoot = memoryRoot.resolve("items").normalize();
+        Path itemDirectory = itemsRoot.resolve(itemId).normalize();
+        if (!itemDirectory.startsWith(itemsRoot)) {
+            throw new IOException("Refusing to access outside memory items directory: " + itemDirectory);
+        }
+        return itemDirectory;
+    }
+
     private boolean removeCatalogEntry(String itemId) throws IOException {
         Path catalogPath = memoryRoot.resolve("catalog.json");
         if (Files.notExists(catalogPath)) {
@@ -154,13 +196,7 @@ public class ClothingMemoryStore {
     }
 
     private void deleteItemDirectory(String itemId) throws IOException {
-        Path itemsRoot = memoryRoot.resolve("items").normalize();
-        Path itemDirectory = itemsRoot.resolve(itemId).normalize();
-        if (!itemDirectory.startsWith(itemsRoot)) {
-            throw new IOException("Refusing to delete outside memory items directory: " + itemDirectory);
-        }
-
-        deleteRecursively(itemDirectory);
+        deleteRecursively(resolveItemDirectory(itemId));
     }
 
     private void deleteRecursively(Path path) throws IOException {
@@ -265,10 +301,29 @@ public class ClothingMemoryStore {
             return null;
         }
 
-        Path sourcePhoto = draft.sourcePhotoPath();
-        Path targetPhoto = itemDirectory.resolve("photo" + getExtension(sourcePhoto));
+        Path sourcePhoto = draft.sourcePhotoPath().toAbsolutePath().normalize();
+        Path targetPhoto = itemDirectory.resolve("photo" + getExtension(sourcePhoto)).normalize();
+        if (sourcePhoto.equals(targetPhoto)) {
+            return targetPhoto;
+        }
         Files.copy(sourcePhoto, targetPhoto, StandardCopyOption.REPLACE_EXISTING);
         return targetPhoto;
+    }
+
+    private Path updatePhoto(ClothingItemDraft draft, Path itemDirectory, Path existingPhotoPath) throws IOException {
+        if (draft.sourcePhotoPath() == null) {
+            return existingPhotoPath;
+        }
+
+        Path updatedPhotoPath = copyPhoto(draft, itemDirectory);
+        if (existingPhotoPath != null) {
+            Path normalizedExistingPhotoPath = existingPhotoPath.toAbsolutePath().normalize();
+            if (normalizedExistingPhotoPath.startsWith(itemDirectory.toAbsolutePath().normalize())
+                    && !normalizedExistingPhotoPath.equals(updatedPhotoPath.toAbsolutePath().normalize())) {
+                Files.deleteIfExists(normalizedExistingPhotoPath);
+            }
+        }
+        return updatedPhotoPath;
     }
 
     private String getExtension(Path path) {
@@ -283,14 +338,14 @@ public class ClothingMemoryStore {
     private String buildItemJson(
             ClothingItemDraft draft,
             String id,
-            Instant createdAt,
+            String createdAt,
             Path itemJsonPath,
             Path photoPath
     ) {
         StringBuilder json = new StringBuilder();
         json.append("{\n");
         appendProperty(json, 1, "id", jsonString(id), true);
-        appendProperty(json, 1, "createdAt", jsonString(createdAt.toString()), true);
+        appendProperty(json, 1, "createdAt", jsonString(createdAt), true);
         appendProperty(json, 1, "itemJsonPath", jsonString(toProjectRelativePath(itemJsonPath)), true);
         appendObjectStart(json, 1, "details");
         appendProperty(json, 2, "name", jsonNullableText(draft.name()), true);
@@ -342,6 +397,42 @@ public class ClothingMemoryStore {
         Files.writeString(catalogPath, updatedCatalog, StandardCharsets.UTF_8);
     }
 
+    private void replaceCatalogEntry(
+            ClothingItemDraft draft,
+            String id,
+            String createdAt,
+            Path itemJsonPath,
+            Path photoPath
+    ) throws IOException {
+        Files.createDirectories(memoryRoot);
+
+        Path catalogPath = memoryRoot.resolve("catalog.json");
+        List<Object> catalogEntries = new ArrayList<>();
+        if (Files.exists(catalogPath)) {
+            Object catalogJson = JsonParser.parse(Files.readString(catalogPath, StandardCharsets.UTF_8));
+            if (!(catalogJson instanceof List<?> entries)) {
+                throw new IOException("Catalog file is not a JSON array: " + catalogPath);
+            }
+            catalogEntries.addAll(entries);
+        }
+
+        Map<String, Object> updatedEntry = buildCatalogEntryMap(draft, id, createdAt, itemJsonPath, photoPath);
+        boolean replaced = false;
+        for (int index = 0; index < catalogEntries.size(); index++) {
+            Object catalogEntry = catalogEntries.get(index);
+            if (catalogEntry instanceof Map<?, ?> catalogItem && id.equals(textValue(catalogItem, "id"))) {
+                catalogEntries.set(index, updatedEntry);
+                replaced = true;
+                break;
+            }
+        }
+
+        if (!replaced) {
+            catalogEntries.add(updatedEntry);
+        }
+        Files.writeString(catalogPath, JsonWriter.write(catalogEntries), StandardCharsets.UTF_8);
+    }
+
     private String buildCatalogEntry(
             ClothingItemDraft draft,
             String id,
@@ -362,14 +453,36 @@ public class ClothingMemoryStore {
         return json.toString();
     }
 
+    private Map<String, Object> buildCatalogEntryMap(
+            ClothingItemDraft draft,
+            String id,
+            String createdAt,
+            Path itemJsonPath,
+            Path photoPath
+    ) {
+        Map<String, Object> entry = new LinkedHashMap<>();
+        entry.put("id", id);
+        entry.put("createdAt", createdAt);
+        entry.put("name", cleanText(draft.name()));
+        entry.put("clothingType", enumMap(draft.clothingType()));
+        entry.put("mainColor", mainColorMap(draft.mainColor()));
+        entry.put("itemJsonPath", toProjectRelativePath(itemJsonPath));
+        entry.put("photoPath", photoPath == null ? null : toProjectRelativePath(photoPath));
+        return entry;
+    }
+
     private String photoJson(ClothingItemDraft draft, Path photoPath) {
         if (photoPath == null) {
             return "null";
         }
 
+        String originalFileName = draft.sourcePhotoPath() == null
+                ? photoPath.getFileName().toString()
+                : draft.sourcePhotoPath().getFileName().toString();
+
         StringBuilder json = new StringBuilder();
         json.append("{\n");
-        appendProperty(json, 2, "originalFileName", jsonString(draft.sourcePhotoPath().getFileName().toString()), true);
+        appendProperty(json, 2, "originalFileName", jsonString(originalFileName), true);
         appendProperty(json, 2, "path", jsonString(toProjectRelativePath(photoPath)), true);
         appendProperty(json, 2, "absolutePath", jsonString(photoPath.toAbsolutePath().normalize().toString()), false);
         appendIndent(json, 1);
@@ -385,6 +498,17 @@ public class ClothingMemoryStore {
         return "{\"value\": " + jsonString(value.name()) + ", \"label\": " + jsonString(value.toString()) + "}";
     }
 
+    private Map<String, Object> enumMap(Enum<?> value) {
+        if (value == null) {
+            return null;
+        }
+
+        Map<String, Object> enumValue = new LinkedHashMap<>();
+        enumValue.put("value", value.name());
+        enumValue.put("label", value.toString());
+        return enumValue;
+    }
+
     private String mainColorJson(MainColor color) {
         if (color == null) {
             return "null";
@@ -394,6 +518,18 @@ public class ClothingMemoryStore {
                 + ", \"label\": " + jsonString(color.toString())
                 + ", \"hex\": " + jsonString(color.getHex())
                 + "}";
+    }
+
+    private Map<String, Object> mainColorMap(MainColor color) {
+        if (color == null) {
+            return null;
+        }
+
+        Map<String, Object> colorValue = new LinkedHashMap<>();
+        colorValue.put("value", color.name());
+        colorValue.put("label", color.toString());
+        colorValue.put("hex", color.getHex());
+        return colorValue;
     }
 
     private void appendObjectStart(StringBuilder json, int indentLevel, String name) {
@@ -428,6 +564,13 @@ public class ClothingMemoryStore {
             return "null";
         }
         return jsonString(value.trim());
+    }
+
+    private String cleanText(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
     }
 
     private String jsonString(String value) {

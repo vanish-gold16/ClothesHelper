@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Consumer;
 
 public class LibraryPage extends ScrollPane {
     private static final String CARD_STYLE = "-fx-background-color: #ffffff;"
@@ -51,6 +52,7 @@ public class LibraryPage extends ScrollPane {
     private static final String ALL_VIBES = "All vibes";
 
     private final ClothingMemoryStore memoryStore = new ClothingMemoryStore();
+    private final Consumer<SavedClothingItem> editHandler;
     private final Label summaryLabel = new Label();
     private final FlowPane itemGrid = new FlowPane();
     private final List<SavedClothingItem> allItems = new ArrayList<>();
@@ -64,6 +66,13 @@ public class LibraryPage extends ScrollPane {
     private final ComboBox<String> vibeFilter = createFilterComboBox(ALL_VIBES);
 
     public LibraryPage() {
+        this(item -> {
+        });
+    }
+
+    public LibraryPage(Consumer<SavedClothingItem> editHandler) {
+        this.editHandler = editHandler;
+
         VBox pageContent = new VBox(24, createHeader(), createLibraryLayout());
         pageContent.setAlignment(Pos.TOP_CENTER);
         pageContent.setPadding(new Insets(32));
@@ -198,7 +207,7 @@ public class LibraryPage extends ScrollPane {
         addDetail(details, "Vibe", item.vibe());
         addDetail(details, "Notes", item.notes());
 
-        VBox card = new VBox(12, createPreview(item), title, details, createDeleteButton(item));
+        VBox card = new VBox(12, createPreview(item), title, details, createActionButtons(item));
         card.setAlignment(Pos.TOP_LEFT);
         card.setPadding(new Insets(14));
         card.setPrefWidth(220);
@@ -240,6 +249,30 @@ public class LibraryPage extends ScrollPane {
                 + "-fx-background-radius: 8;");
         preview.getChildren().add(placeholderLabel);
         return preview;
+    }
+
+    private HBox createActionButtons(SavedClothingItem item) {
+        Button editButton = createEditButton(item);
+        Button deleteButton = createDeleteButton(item);
+        HBox.setHgrow(editButton, Priority.ALWAYS);
+        HBox.setHgrow(deleteButton, Priority.ALWAYS);
+
+        HBox actions = new HBox(8, editButton, deleteButton);
+        actions.setAlignment(Pos.CENTER_LEFT);
+        actions.setMaxWidth(Double.MAX_VALUE);
+        return actions;
+    }
+
+    private Button createEditButton(SavedClothingItem item) {
+        Button editButton = new Button("Edit");
+        editButton.setMaxWidth(Double.MAX_VALUE);
+        editButton.setStyle("-fx-background-color: #dbeafe;"
+                + "-fx-text-fill: #1d4ed8;"
+                + "-fx-font-size: 13px;"
+                + "-fx-padding: 8 12;"
+                + "-fx-background-radius: 6;");
+        editButton.setOnAction(event -> editHandler.accept(item));
+        return editButton;
     }
 
     private Button createDeleteButton(SavedClothingItem item) {
