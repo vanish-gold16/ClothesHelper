@@ -75,8 +75,7 @@ public class LibraryPage extends ScrollPane {
         itemGrid.setMaxWidth(Double.MAX_VALUE);
 
         setContent(pageContent);
-        setFitToWidth(true);
-        setStyle(UiStyles.SCROLL_PAGE_BACKGROUND);
+        UiStyles.configurePageScrollPane(this);
 
         refreshItems();
     }

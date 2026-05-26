@@ -50,8 +50,7 @@ public class AddItemPage extends ScrollPane {
         pageContent.setStyle(UiStyles.PAGE_BACKGROUND);
 
         setContent(pageContent);
-        setFitToWidth(true);
-        setStyle(UiStyles.SCROLL_PAGE_BACKGROUND);
+        UiStyles.configurePageScrollPane(this);
     }
 
     private HBox createFormLayout() {

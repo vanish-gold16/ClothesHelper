@@ -24,8 +24,7 @@ public class SettingsPage extends ScrollPane {
         pageContent.setStyle(UiStyles.PAGE_BACKGROUND);
 
         setContent(pageContent);
-        setFitToWidth(true);
-        setStyle(UiStyles.SCROLL_PAGE_BACKGROUND);
+        UiStyles.configurePageScrollPane(this);
     }
 
     private VBox createThemeCard(AppTheme currentTheme, Consumer<AppTheme> themeChangeHandler) {

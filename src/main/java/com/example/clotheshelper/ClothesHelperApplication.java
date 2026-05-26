@@ -1,6 +1,7 @@
 package com.example.clotheshelper;
 
 import com.example.clotheshelper.ui.AppRoot;
+import com.example.clotheshelper.ui.styles.UiStyles;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
@@ -9,6 +10,7 @@ public class ClothesHelperApplication extends Application {
     @Override
     public void start(Stage stage) {
         Scene scene = new Scene(new AppRoot(stage), 850, 600);
+        UiStyles.addAppStylesheet(scene);
 
         stage.setTitle("ClothesHelper");
         stage.setMinWidth(640);

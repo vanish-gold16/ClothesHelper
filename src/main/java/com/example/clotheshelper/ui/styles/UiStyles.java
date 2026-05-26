@@ -1,6 +1,15 @@
 package com.example.clotheshelper.ui.styles;
 
+import javafx.scene.control.ScrollPane;
+import javafx.scene.Scene;
+
+import java.net.URL;
+
 public final class UiStyles {
+    private static final String APP_STYLESHEET = "/com/example/clotheshelper/ui/styles/app.css";
+
+    public static final String PAGE_SCROLL_CLASS = "app-page-scroll";
+
     public static final String CARD = "-fx-background-color: -app-surface;"
             + "-fx-border-color: -app-border;"
             + "-fx-border-radius: 10;"
@@ -143,5 +152,21 @@ public final class UiStyles {
         return "-fx-font-size: 15px;"
                 + "-fx-font-weight: bold;"
                 + "-fx-text-fill: " + textColor + ";";
+    }
+
+    public static void configurePageScrollPane(ScrollPane scrollPane) {
+        if (!scrollPane.getStyleClass().contains(PAGE_SCROLL_CLASS)) {
+            scrollPane.getStyleClass().add(PAGE_SCROLL_CLASS);
+        }
+        scrollPane.setFitToWidth(true);
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scrollPane.setStyle(SCROLL_PAGE_BACKGROUND);
+    }
+
+    public static void addAppStylesheet(Scene scene) {
+        URL stylesheet = UiStyles.class.getResource(APP_STYLESHEET);
+        if (stylesheet != null) {
+            scene.getStylesheets().add(stylesheet.toExternalForm());
+        }
     }
 }

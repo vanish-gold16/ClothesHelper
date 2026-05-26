@@ -1,0 +1,109 @@
+.app-page-scroll {
+    -fx-background: -app-background;
+    -fx-background-color: -app-background;
+}
+
+.app-page-scroll > .viewport {
+    -fx-background-color: -app-background;
+}
+
+.app-page-scroll > .corner {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.app-page-scroll > .scroll-bar:vertical {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+    -fx-pref-width: 0;
+    -fx-min-width: 0;
+    -fx-max-width: 0;
+    -fx-opacity: 0;
+}
+
+.app-page-scroll > .scroll-bar:horizontal {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+    -fx-pref-height: 0;
+    -fx-min-height: 0;
+    -fx-max-height: 0;
+    -fx-opacity: 0;
+}
+
+.app-page-scroll > .scroll-bar > .increment-button,
+.app-page-scroll > .scroll-bar > .decrement-button {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.app-page-scroll > .scroll-bar > .increment-button > .increment-arrow,
+.app-page-scroll > .scroll-bar > .decrement-button > .decrement-arrow,
+.app-page-scroll > .scroll-bar > .thumb,
+.app-page-scroll > .scroll-bar > .track {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.combo-box-popup .list-view {
+    -fx-background-color: -app-surface;
+    -fx-control-inner-background: -app-surface;
+    -fx-border-color: -app-border;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 2;
+}
+
+.combo-box-popup .list-view .list-cell {
+    -fx-background-color: -app-surface;
+    -fx-text-fill: -app-text;
+    -fx-padding: 8 12;
+}
+
+.combo-box-popup .list-view .list-cell:filled:hover {
+    -fx-background-color: -app-muted-surface;
+    -fx-text-fill: -app-text;
+}
+
+.combo-box-popup .list-view .list-cell:filled:selected,
+.combo-box-popup .list-view .list-cell:filled:selected:hover {
+    -fx-background-color: -app-primary;
+    -fx-text-fill: -app-on-primary;
+}
+
+.combo-box-popup .list-view .scroll-bar {
+    -fx-background-color: -app-surface;
+    -fx-background-insets: 0;
+}
+
+.combo-box-popup .list-view .scroll-bar:vertical {
+    -fx-pref-width: 8;
+}
+
+.combo-box-popup .list-view .scroll-bar:horizontal {
+    -fx-pref-height: 8;
+}
+
+.combo-box-popup .list-view .scroll-bar .track {
+    -fx-background-color: -app-surface;
+}
+
+.combo-box-popup .list-view .scroll-bar .thumb {
+    -fx-background-color: -app-border;
+    -fx-background-radius: 999;
+}
+
+.combo-box-popup .list-view .scroll-bar .increment-button,
+.combo-box-popup .list-view .scroll-bar .decrement-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.combo-box-popup .list-view .scroll-bar .increment-arrow,
+.combo-box-popup .list-view .scroll-bar .decrement-arrow {
+    -fx-background-color: -app-muted-text;
+    -fx-padding: 0;
+}
