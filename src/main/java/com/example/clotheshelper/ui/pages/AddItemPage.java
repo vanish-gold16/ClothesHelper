@@ -35,13 +35,19 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 public class AddItemPage extends ScrollPane {
-    private static final String CARD_STYLE = "-fx-background-color: #ffffff;"
-            + "-fx-border-color: #e5e7eb;"
+    private static final String CARD_STYLE = "-fx-background-color: -app-surface;"
+            + "-fx-border-color: -app-border;"
             + "-fx-border-radius: 10;"
             + "-fx-background-radius: 10;";
 
     private static final String INPUT_STYLE = "-fx-font-size: 14px;"
             + "-fx-padding: 10;"
+            + "-fx-text-fill: -app-text;"
+            + "-fx-prompt-text-fill: -app-muted-text;"
+            + "-fx-control-inner-background: -app-surface;"
+            + "-fx-background-color: -app-muted-surface;"
+            + "-fx-border-color: -app-border;"
+            + "-fx-border-radius: 6;"
             + "-fx-background-radius: 6;";
 
     private final Stage owner;
@@ -68,19 +74,19 @@ public class AddItemPage extends ScrollPane {
         VBox pageContent = new VBox(24, createHeader(), createFormLayout());
         pageContent.setAlignment(Pos.TOP_CENTER);
         pageContent.setPadding(new Insets(32));
-        pageContent.setStyle("-fx-background-color: #f9fafb;");
+        pageContent.setStyle("-fx-background-color: -app-background;");
 
         setContent(pageContent);
         setFitToWidth(true);
-        setStyle("-fx-background: #f9fafb; -fx-background-color: #f9fafb;");
+        setStyle("-fx-background: -app-background; -fx-background-color: -app-background;");
     }
 
     private VBox createHeader() {
         Label titleLabel = new Label("Add clothing item");
-        titleLabel.setStyle("-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #111827;");
+        titleLabel.setStyle("-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: -app-text;");
 
         Label subtitleLabel = new Label("Fill in the basic details now. You can expand the enums later.");
-        subtitleLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #6b7280;");
+        subtitleLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: -app-muted-text;");
 
         VBox header = new VBox(6, titleLabel, subtitleLabel);
         header.setAlignment(Pos.CENTER_LEFT);
@@ -105,15 +111,15 @@ public class AddItemPage extends ScrollPane {
 
         Button choosePhotoButton = new Button("Choose photo");
         choosePhotoButton.setMaxWidth(Double.MAX_VALUE);
-        choosePhotoButton.setStyle("-fx-background-color: #2563eb;"
-                + "-fx-text-fill: white;"
+        choosePhotoButton.setStyle("-fx-background-color: -app-primary;"
+                + "-fx-text-fill: -app-on-primary;"
                 + "-fx-font-size: 14px;"
                 + "-fx-padding: 10 16;"
                 + "-fx-background-radius: 6;");
         choosePhotoButton.setOnAction(event -> choosePhoto());
 
         selectedPhotoLabel.setWrapText(true);
-        selectedPhotoLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #6b7280;");
+        selectedPhotoLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: -app-muted-text;");
 
         VBox card = new VBox(12, cardTitle, photoEditor, choosePhotoButton, selectedPhotoLabel);
         card.setAlignment(Pos.TOP_CENTER);
@@ -144,15 +150,15 @@ public class AddItemPage extends ScrollPane {
 
         Button saveButton = new Button("Save item");
         saveButton.setMaxWidth(Double.MAX_VALUE);
-        saveButton.setStyle("-fx-background-color: #16a34a;"
-                + "-fx-text-fill: white;"
+        saveButton.setStyle("-fx-background-color: -app-success;"
+                + "-fx-text-fill: -app-on-primary;"
                 + "-fx-font-size: 14px;"
                 + "-fx-padding: 10 16;"
                 + "-fx-background-radius: 6;");
         saveButton.setOnAction(event -> saveItem());
 
         saveStatusLabel.setWrapText(true);
-        saveStatusLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #6b7280;");
+        saveStatusLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: -app-muted-text;");
 
         VBox card = new VBox(16, cardTitle, fields, saveButton, saveStatusLabel);
         card.setAlignment(Pos.TOP_LEFT);
@@ -183,7 +189,7 @@ public class AddItemPage extends ScrollPane {
         notesField.setPrefRowCount(3);
         notesField.setWrapText(true);
         notesField.setMaxWidth(Double.MAX_VALUE);
-        notesField.setStyle("-fx-font-size: 14px; -fx-background-radius: 6;");
+        notesField.setStyle(INPUT_STYLE);
         return notesField;
     }
 
@@ -198,7 +204,11 @@ public class AddItemPage extends ScrollPane {
         ComboBox<T> comboBox = new ComboBox<>(FXCollections.observableArrayList(values));
         comboBox.setPromptText(promptText);
         comboBox.setMaxWidth(Double.MAX_VALUE);
-        comboBox.setStyle("-fx-font-size: 14px;");
+        comboBox.setStyle("-fx-font-size: 14px;"
+                + "-fx-background-color: -app-muted-surface;"
+                + "-fx-border-color: -app-border;"
+                + "-fx-border-radius: 6;"
+                + "-fx-background-radius: 6;");
         return comboBox;
     }
 
@@ -223,13 +233,13 @@ public class AddItemPage extends ScrollPane {
 
     private Label createCardTitle(String text) {
         Label label = new Label(text);
-        label.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #111827;");
+        label.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: -app-text;");
         return label;
     }
 
     private Label createFieldLabel(String text) {
         Label label = new Label(text);
-        label.setStyle("-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #374151;");
+        label.setStyle("-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: -app-muted-text;");
         return label;
     }
 
@@ -310,7 +320,7 @@ public class AddItemPage extends ScrollPane {
 
     private void setSaveStatus(String text, boolean isError) {
         saveStatusLabel.setText(text);
-        saveStatusLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: " + (isError ? "#dc2626" : "#047857") + ";");
+        saveStatusLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: " + (isError ? "-app-error" : "-app-success") + ";");
     }
 
     private static class MainColorCell extends ListCell<MainColor> {
@@ -327,12 +337,12 @@ public class AddItemPage extends ScrollPane {
             Region swatch = new Region();
             swatch.setPrefSize(14, 14);
             swatch.setStyle("-fx-background-color: " + color.getHex() + ";"
-                    + "-fx-border-color: #d1d5db;"
+                    + "-fx-border-color: -app-border;"
                     + "-fx-border-radius: 3;"
                     + "-fx-background-radius: 3;");
 
             Label label = new Label(color.toString());
-            label.setStyle("-fx-text-fill: #111827;");
+            label.setStyle("-fx-text-fill: -app-text;");
 
             HBox content = new HBox(8, swatch, label);
             content.setAlignment(Pos.CENTER_LEFT);

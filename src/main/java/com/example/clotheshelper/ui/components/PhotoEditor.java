@@ -62,8 +62,8 @@ public class PhotoEditor extends VBox {
         previewFrame.setMinSize(PREVIEW_SIZE, PREVIEW_SIZE);
         previewFrame.setPrefSize(PREVIEW_SIZE, PREVIEW_SIZE);
         previewFrame.setMaxSize(PREVIEW_SIZE, PREVIEW_SIZE);
-        previewFrame.setStyle("-fx-background-color: #f3f4f6;"
-                + "-fx-border-color: #d1d5db;"
+        previewFrame.setStyle("-fx-background-color: -app-muted-surface;"
+                + "-fx-border-color: -app-border;"
                 + "-fx-border-radius: 8;"
                 + "-fx-background-radius: 8;");
 
@@ -78,8 +78,8 @@ public class PhotoEditor extends VBox {
         });
 
         resetButton.setDisable(true);
-        resetButton.setStyle("-fx-background-color: #e5e7eb;"
-                + "-fx-text-fill: #111827;"
+        resetButton.setStyle("-fx-background-color: -app-secondary-background;"
+                + "-fx-text-fill: -app-secondary-text;"
                 + "-fx-font-size: 13px;"
                 + "-fx-padding: 7 10;"
                 + "-fx-background-radius: 6;");
@@ -161,13 +161,13 @@ public class PhotoEditor extends VBox {
 
     private Label createPlaceholder() {
         Label placeholder = new Label(placeholderText);
-        placeholder.setStyle("-fx-font-size: 14px; -fx-text-fill: #6b7280;");
+        placeholder.setStyle("-fx-font-size: 14px; -fx-text-fill: -app-muted-text;");
         return placeholder;
     }
 
     private Label createZoomLabel() {
         Label zoomLabel = new Label("Zoom");
-        zoomLabel.setStyle("-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #374151;");
+        zoomLabel.setStyle("-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: -app-muted-text;");
         return zoomLabel;
     }
 

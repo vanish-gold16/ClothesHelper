@@ -34,16 +34,22 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 public class LibraryPage extends ScrollPane {
-    private static final String CARD_STYLE = "-fx-background-color: #ffffff;"
-            + "-fx-border-color: #e5e7eb;"
+    private static final String CARD_STYLE = "-fx-background-color: -app-surface;"
+            + "-fx-border-color: -app-border;"
             + "-fx-border-radius: 10;"
             + "-fx-background-radius: 10;";
 
     private static final String INPUT_STYLE = "-fx-font-size: 14px;"
             + "-fx-padding: 8 10;"
+            + "-fx-text-fill: -app-text;"
+            + "-fx-prompt-text-fill: -app-muted-text;"
+            + "-fx-control-inner-background: -app-surface;"
+            + "-fx-background-color: -app-muted-surface;"
+            + "-fx-border-color: -app-border;"
+            + "-fx-border-radius: 6;"
             + "-fx-background-radius: 6;";
 
-    private static final String MUTED_TEXT_STYLE = "-fx-font-size: 13px; -fx-text-fill: #6b7280;";
+    private static final String MUTED_TEXT_STYLE = "-fx-font-size: 13px; -fx-text-fill: -app-muted-text;";
     private static final double LAYOUT_MAX_WIDTH = 1240;
     private static final String ALL_TYPES = "All types";
     private static final String ALL_COLORS = "All colors";
@@ -76,7 +82,7 @@ public class LibraryPage extends ScrollPane {
         VBox pageContent = new VBox(24, createHeader(), createLibraryLayout());
         pageContent.setAlignment(Pos.TOP_CENTER);
         pageContent.setPadding(new Insets(32));
-        pageContent.setStyle("-fx-background-color: #f9fafb;");
+        pageContent.setStyle("-fx-background-color: -app-background;");
 
         itemGrid.setAlignment(Pos.TOP_LEFT);
         itemGrid.setHgap(16);
@@ -85,7 +91,7 @@ public class LibraryPage extends ScrollPane {
 
         setContent(pageContent);
         setFitToWidth(true);
-        setStyle("-fx-background: #f9fafb; -fx-background-color: #f9fafb;");
+        setStyle("-fx-background: -app-background; -fx-background-color: -app-background;");
 
         refreshItems();
     }
@@ -108,7 +114,7 @@ public class LibraryPage extends ScrollPane {
 
     private HBox createHeader() {
         Label titleLabel = new Label("Library");
-        titleLabel.setStyle("-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #111827;");
+        titleLabel.setStyle("-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: -app-text;");
 
         summaryLabel.setStyle(MUTED_TEXT_STYLE);
 
@@ -116,8 +122,8 @@ public class LibraryPage extends ScrollPane {
         text.setAlignment(Pos.CENTER_LEFT);
 
         Button refreshButton = new Button("Refresh");
-        refreshButton.setStyle("-fx-background-color: #2563eb;"
-                + "-fx-text-fill: white;"
+        refreshButton.setStyle("-fx-background-color: -app-primary;"
+                + "-fx-text-fill: -app-on-primary;"
                 + "-fx-font-size: 14px;"
                 + "-fx-padding: 10 16;"
                 + "-fx-background-radius: 6;");
@@ -148,7 +154,7 @@ public class LibraryPage extends ScrollPane {
 
     private VBox createFilterPanel() {
         Label title = new Label("Sort & filter");
-        title.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #111827;");
+        title.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: -app-text;");
 
         VBox filters = new VBox(12,
                 createFilterField("Sort", sortField),
@@ -164,8 +170,8 @@ public class LibraryPage extends ScrollPane {
 
         Button clearButton = new Button("Clear filters");
         clearButton.setMaxWidth(Double.MAX_VALUE);
-        clearButton.setStyle("-fx-background-color: #e5e7eb;"
-                + "-fx-text-fill: #111827;"
+        clearButton.setStyle("-fx-background-color: -app-secondary-background;"
+                + "-fx-text-fill: -app-secondary-text;"
                 + "-fx-font-size: 13px;"
                 + "-fx-padding: 8 12;"
                 + "-fx-background-radius: 6;");
@@ -183,7 +189,7 @@ public class LibraryPage extends ScrollPane {
 
     private VBox createFilterField(String labelText, Node input) {
         Label label = new Label(labelText);
-        label.setStyle("-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #374151;");
+        label.setStyle("-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: -app-muted-text;");
 
         VBox field = new VBox(6, label, input);
         field.setAlignment(Pos.TOP_LEFT);
@@ -195,7 +201,7 @@ public class LibraryPage extends ScrollPane {
         Label title = new Label(createItemTitle(item));
         title.setMaxWidth(Double.MAX_VALUE);
         title.setWrapText(true);
-        title.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #111827;");
+        title.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: -app-text;");
 
         VBox details = new VBox(4);
         addDetail(details, "Type", item.clothingType());
@@ -220,8 +226,8 @@ public class LibraryPage extends ScrollPane {
         StackPane preview = new StackPane();
         preview.setPrefSize(192, 220);
         preview.setMaxSize(192, 220);
-        preview.setStyle("-fx-background-color: #f3f4f6;"
-                + "-fx-border-color: #d1d5db;"
+        preview.setStyle("-fx-background-color: -app-muted-surface;"
+                + "-fx-border-color: -app-border;"
                 + "-fx-border-radius: 8;"
                 + "-fx-background-radius: 8;");
 
@@ -253,7 +259,7 @@ public class LibraryPage extends ScrollPane {
                 + "-fx-text-fill: " + readableTextColor(color) + ";");
 
         preview.setStyle("-fx-background-color: " + color + ";"
-                + "-fx-border-color: #d1d5db;"
+                + "-fx-border-color: -app-border;"
                 + "-fx-border-radius: 8;"
                 + "-fx-background-radius: 8;");
         preview.getChildren().add(placeholderLabel);
@@ -275,8 +281,8 @@ public class LibraryPage extends ScrollPane {
     private Button createEditButton(SavedClothingItem item) {
         Button editButton = new Button("Edit");
         editButton.setMaxWidth(Double.MAX_VALUE);
-        editButton.setStyle("-fx-background-color: #dbeafe;"
-                + "-fx-text-fill: #1d4ed8;"
+        editButton.setStyle("-fx-background-color: -app-info-background;"
+                + "-fx-text-fill: -app-info-text;"
                 + "-fx-font-size: 13px;"
                 + "-fx-padding: 8 12;"
                 + "-fx-background-radius: 6;");
@@ -287,8 +293,8 @@ public class LibraryPage extends ScrollPane {
     private Button createDeleteButton(SavedClothingItem item) {
         Button deleteButton = new Button("Delete");
         deleteButton.setMaxWidth(Double.MAX_VALUE);
-        deleteButton.setStyle("-fx-background-color: #fee2e2;"
-                + "-fx-text-fill: #991b1b;"
+        deleteButton.setStyle("-fx-background-color: -app-danger-background;"
+                + "-fx-text-fill: -app-danger-text;"
                 + "-fx-font-size: 13px;"
                 + "-fx-padding: 8 12;"
                 + "-fx-background-radius: 6;");
@@ -350,7 +356,11 @@ public class LibraryPage extends ScrollPane {
         ComboBox<SortOption> comboBox = new ComboBox<>(FXCollections.observableArrayList(SortOption.values()));
         comboBox.setValue(SortOption.NEWEST_FIRST);
         comboBox.setMaxWidth(Double.MAX_VALUE);
-        comboBox.setStyle("-fx-font-size: 14px;");
+        comboBox.setStyle("-fx-font-size: 14px;"
+                + "-fx-background-color: -app-muted-surface;"
+                + "-fx-border-color: -app-border;"
+                + "-fx-border-radius: 6;"
+                + "-fx-background-radius: 6;");
         comboBox.valueProperty().addListener((observable, oldValue, newValue) -> renderFilteredItems());
         return comboBox;
     }
@@ -359,7 +369,11 @@ public class LibraryPage extends ScrollPane {
         ComboBox<String> comboBox = new ComboBox<>(FXCollections.observableArrayList(allValue));
         comboBox.setValue(allValue);
         comboBox.setMaxWidth(Double.MAX_VALUE);
-        comboBox.setStyle("-fx-font-size: 14px;");
+        comboBox.setStyle("-fx-font-size: 14px;"
+                + "-fx-background-color: -app-muted-surface;"
+                + "-fx-border-color: -app-border;"
+                + "-fx-border-radius: 6;"
+                + "-fx-background-radius: 6;");
         comboBox.valueProperty().addListener((observable, oldValue, newValue) -> renderFilteredItems());
         return comboBox;
     }
