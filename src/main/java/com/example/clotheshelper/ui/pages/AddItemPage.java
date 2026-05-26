@@ -8,6 +8,7 @@ import com.example.clotheshelper.enums.WearOccasion;
 import com.example.clotheshelper.storage.ClothingItemDraft;
 import com.example.clotheshelper.storage.ClothingMemoryStore;
 import com.example.clotheshelper.storage.StoredClothingItem;
+import com.example.clotheshelper.ui.components.PhotoEditor;
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -19,20 +20,19 @@ import javafx.scene.control.ListCell;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
-import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 public class AddItemPage extends ScrollPane {
     private static final String CARD_STYLE = "-fx-background-color: #ffffff;"
@@ -45,8 +45,7 @@ public class AddItemPage extends ScrollPane {
             + "-fx-background-radius: 6;";
 
     private final Stage owner;
-    private final ImageView photoView = new ImageView();
-    private final StackPane photoPreview = new StackPane();
+    private final PhotoEditor photoEditor = new PhotoEditor("No photo selected");
     private final Label selectedPhotoLabel = new Label();
     private final Label saveStatusLabel = new Label();
     private final ClothingMemoryStore memoryStore = new ClothingMemoryStore();
@@ -104,21 +103,6 @@ public class AddItemPage extends ScrollPane {
     private VBox createPhotoCard() {
         Label cardTitle = createCardTitle("Photo");
 
-        Label photoPlaceholder = new Label("No photo selected");
-        photoPlaceholder.setStyle("-fx-font-size: 14px; -fx-text-fill: #6b7280;");
-
-        photoView.setFitWidth(220);
-        photoView.setFitHeight(220);
-        photoView.setPreserveRatio(true);
-
-        photoPreview.getChildren().setAll(photoPlaceholder);
-        photoPreview.setPrefSize(240, 240);
-        photoPreview.setMaxSize(240, 240);
-        photoPreview.setStyle("-fx-background-color: #f3f4f6;"
-                + "-fx-border-color: #d1d5db;"
-                + "-fx-border-radius: 8;"
-                + "-fx-background-radius: 8;");
-
         Button choosePhotoButton = new Button("Choose photo");
         choosePhotoButton.setMaxWidth(Double.MAX_VALUE);
         choosePhotoButton.setStyle("-fx-background-color: #2563eb;"
@@ -128,9 +112,10 @@ public class AddItemPage extends ScrollPane {
                 + "-fx-background-radius: 6;");
         choosePhotoButton.setOnAction(event -> choosePhoto());
 
+        selectedPhotoLabel.setWrapText(true);
         selectedPhotoLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #6b7280;");
 
-        VBox card = new VBox(12, cardTitle, photoPreview, choosePhotoButton, selectedPhotoLabel);
+        VBox card = new VBox(12, cardTitle, photoEditor, choosePhotoButton, selectedPhotoLabel);
         card.setAlignment(Pos.TOP_CENTER);
         card.setPadding(new Insets(18));
         card.setPrefWidth(280);
@@ -252,35 +237,39 @@ public class AddItemPage extends ScrollPane {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Choose clothing photo");
         fileChooser.getExtensionFilters().add(
-                new FileChooser.ExtensionFilter("Image files", "*.png", "*.jpg", "*.jpeg", "*.gif")
+                new FileChooser.ExtensionFilter("Image files", "*.png", "*.jpg", "*.jpeg", "*.webp")
         );
 
         File selectedFile = fileChooser.showOpenDialog(owner);
         if (selectedFile != null) {
-            selectedPhotoFile = selectedFile;
-            Image image = new Image(selectedFile.toURI().toString(), 220, 220, true, true);
-            photoView.setImage(image);
-            photoPreview.getChildren().setAll(photoView);
-            selectedPhotoLabel.setText(selectedFile.getName());
-            setSaveStatus("Photo selected. Fill the details and save the item.", false);
+            try {
+                photoEditor.loadPhoto(selectedFile.toPath(), true);
+                selectedPhotoFile = selectedFile;
+                selectedPhotoLabel.setText(selectedFile.getName());
+                setSaveStatus("Photo selected. Fill the details and save the item.", false);
+            } catch (IOException exception) {
+                setSaveStatus("Could not load photo: " + exception.getMessage(), true);
+            }
         }
     }
 
     private void saveItem() {
-        ClothingItemDraft draft = new ClothingItemDraft(
-                nameField.getText(),
-                clothingTypeField.getValue(),
-                brandField.getText(),
-                sizeField.getText(),
-                seasonField.getValue(),
-                mainColorField.getValue(),
-                wearOccasionField.getValue(),
-                vibeField.getValue(),
-                notesField.getText(),
-                selectedPhotoFile == null ? null : selectedPhotoFile.toPath()
-        );
+        Path editedPhotoPath = null;
 
         try {
+            editedPhotoPath = createEditedPhotoPath();
+            ClothingItemDraft draft = new ClothingItemDraft(
+                    nameField.getText(),
+                    clothingTypeField.getValue(),
+                    brandField.getText(),
+                    sizeField.getText(),
+                    seasonField.getValue(),
+                    mainColorField.getValue(),
+                    wearOccasionField.getValue(),
+                    vibeField.getValue(),
+                    notesField.getText(),
+                    editedPhotoPath
+            );
             StoredClothingItem storedItem = memoryStore.save(draft);
             String photoMessage = storedItem.hasPhoto()
                     ? " with photo " + memoryStore.toProjectRelativePath(storedItem.photoPath())
@@ -292,6 +281,30 @@ public class AddItemPage extends ScrollPane {
             );
         } catch (IOException exception) {
             setSaveStatus("Could not save item: " + exception.getMessage(), true);
+        } finally {
+            deleteTemporaryPhoto(editedPhotoPath);
+        }
+    }
+
+    private Path createEditedPhotoPath() throws IOException {
+        if (selectedPhotoFile == null) {
+            return null;
+        }
+
+        Path editedPhotoPath = Files.createTempFile("clotheshelper-photo-", ".png");
+        photoEditor.saveEditedPhoto(editedPhotoPath);
+        return editedPhotoPath;
+    }
+
+    private void deleteTemporaryPhoto(Path editedPhotoPath) {
+        if (editedPhotoPath == null) {
+            return;
+        }
+
+        try {
+            Files.deleteIfExists(editedPhotoPath);
+        } catch (IOException ignored) {
+            // The file is in the system temp directory and can be cleaned up later.
         }
     }
 

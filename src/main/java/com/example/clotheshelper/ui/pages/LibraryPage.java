@@ -2,6 +2,7 @@ package com.example.clotheshelper.ui.pages;
 
 import com.example.clotheshelper.storage.ClothingMemoryStore;
 import com.example.clotheshelper.storage.SavedClothingItem;
+import com.example.clotheshelper.ui.components.PhotoImageLoader;
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -13,7 +14,6 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
-import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
@@ -226,11 +226,20 @@ public class LibraryPage extends ScrollPane {
                 + "-fx-background-radius: 8;");
 
         if (item.hasPhoto() && Files.exists(item.photoPath())) {
-            ImageView imageView = new ImageView(new Image(item.photoPath().toUri().toString(), 192, 220, true, true, true));
-            imageView.setFitWidth(192);
-            imageView.setFitHeight(220);
-            imageView.setPreserveRatio(true);
-            preview.getChildren().add(imageView);
+            try {
+                ImageView imageView = new ImageView(PhotoImageLoader.load(item.photoPath(), 192, 220));
+                imageView.setFitWidth(192);
+                imageView.setFitHeight(220);
+                imageView.setPreserveRatio(true);
+                preview.getChildren().add(imageView);
+            } catch (IOException exception) {
+                Label unavailableLabel = new Label("Photo unavailable");
+                unavailableLabel.setWrapText(true);
+                unavailableLabel.setMaxWidth(150);
+                unavailableLabel.setAlignment(Pos.CENTER);
+                unavailableLabel.setStyle(MUTED_TEXT_STYLE);
+                preview.getChildren().add(unavailableLabel);
+            }
             return preview;
         }
 
