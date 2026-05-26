@@ -122,11 +122,28 @@ public final class UiStyles {
             + "-fx-border-width: 0;"
             + "-fx-background-radius: 0;";
 
+    public static final String NOTIFICATION_CLOSE_BUTTON = "-fx-background-color: transparent;"
+            + "-fx-text-fill: -app-muted-text;"
+            + "-fx-font-size: 13px;"
+            + "-fx-font-weight: bold;"
+            + "-fx-padding: 2 6;"
+            + "-fx-background-radius: 999;";
+
+    public static final String NOTIFICATION_SUCCESS_TEXT = "-fx-font-size: 13px;"
+            + "-fx-text-fill: -app-text;";
+
+    public static final String NOTIFICATION_ERROR_TEXT = "-fx-font-size: 13px;"
+            + "-fx-text-fill: -app-error;";
+
     private UiStyles() {
     }
 
-    public static String statusText(boolean isError) {
-        return "-fx-font-size: 13px; -fx-text-fill: " + (isError ? "-app-error" : "-app-success") + ";";
+    public static String notification(boolean isError) {
+        return "-fx-background-color: -app-surface;"
+                + "-fx-border-color: " + (isError ? "-app-error" : "-app-success") + ";"
+                + "-fx-border-radius: 8;"
+                + "-fx-background-radius: 8;"
+                + "-fx-padding: 10 12;";
     }
 
     public static String swatch(String color) {

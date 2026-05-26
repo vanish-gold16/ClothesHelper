@@ -4,6 +4,7 @@ import com.example.clotheshelper.storage.ClothingMemoryStore;
 import com.example.clotheshelper.storage.SavedClothingItem;
 import com.example.clotheshelper.storage.StoredClothingItem;
 import com.example.clotheshelper.ui.components.ClothingItemForm;
+import com.example.clotheshelper.ui.components.NotificationBanner;
 import com.example.clotheshelper.ui.components.PageHeader;
 import com.example.clotheshelper.ui.components.PhotoEditor;
 import com.example.clotheshelper.ui.components.PhotoFileChooser;
@@ -33,8 +34,7 @@ public class EditItemPage extends ScrollPane {
     private final ClothingMemoryStore memoryStore = new ClothingMemoryStore();
     private final ClothingItemForm itemForm = new ClothingItemForm();
     private final PhotoEditor photoEditor = new PhotoEditor("No photo saved");
-    private final Label selectedPhotoLabel = new Label();
-    private final Label saveStatusLabel = new Label();
+    private final NotificationBanner notificationBanner = new NotificationBanner();
 
     private File selectedPhotoFile;
 
@@ -43,10 +43,11 @@ public class EditItemPage extends ScrollPane {
         this.item = item;
         this.onBack = onBack;
         this.onSaved = onSaved;
+        notificationBanner.setMaxWidth(LAYOUT_MAX_WIDTH);
 
         itemForm.populate(item);
 
-        VBox pageContent = new VBox(24, createHeader(), createFormLayout());
+        VBox pageContent = new VBox(24, createHeader(), notificationBanner, createFormLayout());
         pageContent.setAlignment(Pos.TOP_CENTER);
         pageContent.setPadding(new Insets(32));
         pageContent.setStyle(UiStyles.PAGE_BACKGROUND);
@@ -83,10 +84,7 @@ public class EditItemPage extends ScrollPane {
         choosePhotoButton.setStyle(UiStyles.PRIMARY_BUTTON);
         choosePhotoButton.setOnAction(event -> choosePhoto());
 
-        selectedPhotoLabel.setWrapText(true);
-        selectedPhotoLabel.setStyle(UiStyles.MUTED_TEXT);
-
-        VBox card = new VBox(12, createCardTitle("Photo"), photoEditor, choosePhotoButton, selectedPhotoLabel);
+        VBox card = new VBox(12, createCardTitle("Photo"), photoEditor, choosePhotoButton);
         card.setAlignment(Pos.TOP_CENTER);
         card.setPadding(new Insets(18));
         card.setPrefWidth(280);
@@ -110,10 +108,7 @@ public class EditItemPage extends ScrollPane {
         HBox.setHgrow(cancelButton, Priority.ALWAYS);
         HBox.setHgrow(saveButton, Priority.ALWAYS);
 
-        saveStatusLabel.setWrapText(true);
-        saveStatusLabel.setStyle(UiStyles.MUTED_TEXT);
-
-        VBox card = new VBox(16, createCardTitle("Item details"), itemForm, actions, saveStatusLabel);
+        VBox card = new VBox(16, createCardTitle("Item details"), itemForm, actions);
         card.setAlignment(Pos.TOP_LEFT);
         card.setPadding(new Insets(18));
         card.setMinWidth(420);
@@ -137,16 +132,14 @@ public class EditItemPage extends ScrollPane {
         if (item.hasPhoto() && Files.exists(item.photoPath())) {
             try {
                 photoEditor.loadPhoto(item.photoPath(), false);
-                selectedPhotoLabel.setText("Current photo: " + item.photoPath().getFileName());
             } catch (IOException exception) {
                 photoEditor.clear();
-                selectedPhotoLabel.setText("Could not load current photo: " + exception.getMessage());
+                showNotification("Could not load current photo: " + exception.getMessage(), true);
             }
             return;
         }
 
         photoEditor.clear();
-        selectedPhotoLabel.setText("");
     }
 
     private void choosePhoto() {
@@ -158,10 +151,9 @@ public class EditItemPage extends ScrollPane {
         try {
             photoEditor.loadPhoto(selectedFile.toPath(), true);
             selectedPhotoFile = selectedFile;
-            selectedPhotoLabel.setText("New photo: " + selectedFile.getName());
-            setSaveStatus("Photo selected. Save changes to update the item.", false);
+            showNotification("Photo selected: " + selectedFile.getName(), false);
         } catch (IOException exception) {
-            setSaveStatus("Could not load photo: " + exception.getMessage(), true);
+            showNotification("Could not load photo: " + exception.getMessage(), true);
         }
     }
 
@@ -208,8 +200,11 @@ public class EditItemPage extends ScrollPane {
     }
 
     private void setSaveStatus(String text, boolean isError) {
-        saveStatusLabel.setText(text);
-        saveStatusLabel.setStyle(UiStyles.statusText(isError));
+        showNotification(text, isError);
+    }
+
+    private void showNotification(String text, boolean isError) {
+        notificationBanner.showMessage(text, isError);
     }
 
     private String createItemTitle() {

@@ -77,6 +77,18 @@ public class ClothingItemForm extends GridPane {
         notesField.setText(safeText(item.notes()));
     }
 
+    public void clear() {
+        nameField.clear();
+        clothingTypeField.setValue(null);
+        brandField.clear();
+        sizeField.clear();
+        seasonField.setValue(null);
+        mainColorField.setValue(null);
+        wearOccasionField.setValue(null);
+        vibeField.setValue(null);
+        notesField.clear();
+    }
+
     private ColumnConstraints createColumn() {
         ColumnConstraints column = new ColumnConstraints();
         column.setHgrow(Priority.ALWAYS);

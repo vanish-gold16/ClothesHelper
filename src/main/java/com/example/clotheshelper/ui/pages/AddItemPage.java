@@ -3,6 +3,7 @@ package com.example.clotheshelper.ui.pages;
 import com.example.clotheshelper.storage.ClothingMemoryStore;
 import com.example.clotheshelper.storage.StoredClothingItem;
 import com.example.clotheshelper.ui.components.ClothingItemForm;
+import com.example.clotheshelper.ui.components.NotificationBanner;
 import com.example.clotheshelper.ui.components.PageHeader;
 import com.example.clotheshelper.ui.components.PhotoEditor;
 import com.example.clotheshelper.ui.components.PhotoFileChooser;
@@ -29,13 +30,13 @@ public class AddItemPage extends ScrollPane {
     private final ClothingMemoryStore memoryStore = new ClothingMemoryStore();
     private final ClothingItemForm itemForm = new ClothingItemForm();
     private final PhotoEditor photoEditor = new PhotoEditor("No photo selected");
-    private final Label selectedPhotoLabel = new Label();
-    private final Label saveStatusLabel = new Label();
+    private final NotificationBanner notificationBanner = new NotificationBanner();
 
     private File selectedPhotoFile;
 
     public AddItemPage(Stage owner) {
         this.owner = owner;
+        notificationBanner.setMaxWidth(LAYOUT_MAX_WIDTH);
 
         VBox pageContent = new VBox(24,
                 new PageHeader(
@@ -43,6 +44,7 @@ public class AddItemPage extends ScrollPane {
                         "Fill in the basic details now. You can expand the enums later.",
                         LAYOUT_MAX_WIDTH
                 ),
+                notificationBanner,
                 createFormLayout()
         );
         pageContent.setAlignment(Pos.TOP_CENTER);
@@ -70,10 +72,7 @@ public class AddItemPage extends ScrollPane {
         choosePhotoButton.setStyle(UiStyles.PRIMARY_BUTTON);
         choosePhotoButton.setOnAction(event -> choosePhoto());
 
-        selectedPhotoLabel.setWrapText(true);
-        selectedPhotoLabel.setStyle(UiStyles.MUTED_TEXT);
-
-        VBox card = new VBox(12, createCardTitle("Photo"), photoEditor, choosePhotoButton, selectedPhotoLabel);
+        VBox card = new VBox(12, createCardTitle("Photo"), photoEditor, choosePhotoButton);
         card.setAlignment(Pos.TOP_CENTER);
         card.setPadding(new Insets(18));
         card.setPrefWidth(280);
@@ -88,10 +87,7 @@ public class AddItemPage extends ScrollPane {
         saveButton.setStyle(UiStyles.SUCCESS_BUTTON);
         saveButton.setOnAction(event -> saveItem());
 
-        saveStatusLabel.setWrapText(true);
-        saveStatusLabel.setStyle(UiStyles.MUTED_TEXT);
-
-        VBox card = new VBox(16, createCardTitle("Item details"), itemForm, saveButton, saveStatusLabel);
+        VBox card = new VBox(16, createCardTitle("Item details"), itemForm, saveButton);
         card.setAlignment(Pos.TOP_LEFT);
         card.setPadding(new Insets(18));
         card.setMinWidth(420);
@@ -114,10 +110,9 @@ public class AddItemPage extends ScrollPane {
         try {
             photoEditor.loadPhoto(selectedFile.toPath(), true);
             selectedPhotoFile = selectedFile;
-            selectedPhotoLabel.setText(selectedFile.getName());
-            setSaveStatus("Photo selected. Fill the details and save the item.", false);
+            showNotification("Photo selected: " + selectedFile.getName(), false);
         } catch (IOException exception) {
-            setSaveStatus("Could not load photo: " + exception.getMessage(), true);
+            showNotification("Could not load photo: " + exception.getMessage(), true);
         }
     }
 
@@ -135,6 +130,7 @@ public class AddItemPage extends ScrollPane {
                             + photoMessage + ".",
                     false
             );
+            clearFormAfterSave();
         } catch (IOException exception) {
             setSaveStatus("Could not save item: " + exception.getMessage(), true);
         } finally {
@@ -165,7 +161,16 @@ public class AddItemPage extends ScrollPane {
     }
 
     private void setSaveStatus(String text, boolean isError) {
-        saveStatusLabel.setText(text);
-        saveStatusLabel.setStyle(UiStyles.statusText(isError));
+        showNotification(text, isError);
+    }
+
+    private void showNotification(String text, boolean isError) {
+        notificationBanner.showMessage(text, isError);
+    }
+
+    private void clearFormAfterSave() {
+        selectedPhotoFile = null;
+        itemForm.clear();
+        photoEditor.clear();
     }
 }
