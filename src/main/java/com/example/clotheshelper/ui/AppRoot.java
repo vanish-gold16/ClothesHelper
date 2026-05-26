@@ -4,6 +4,7 @@ import com.example.clotheshelper.storage.SavedClothingItem;
 import com.example.clotheshelper.ui.pages.AddItemPage;
 import com.example.clotheshelper.ui.pages.EditItemPage;
 import com.example.clotheshelper.ui.pages.LibraryPage;
+import com.example.clotheshelper.ui.pages.ProfilePage;
 import com.example.clotheshelper.ui.pages.SettingsPage;
 import com.example.clotheshelper.ui.pages.SimplePage;
 import com.example.clotheshelper.ui.styles.UiStyles;
@@ -52,7 +53,7 @@ public class AppRoot extends BorderPane {
         pages.put("Library", libraryPage);
         pages.put("Add", new AddItemPage(owner));
         pages.put("Settings", new SettingsPage(currentTheme, this::setTheme));
-        pages.put("Profile", new SimplePage("Profile", "Your profile information will appear here."));
+        pages.put("Profile", new ProfilePage());
     }
 
     private void showEditPage(Stage owner, SavedClothingItem item) {
