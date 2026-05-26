@@ -35,8 +35,10 @@ public class EditItemPage extends ScrollPane {
     private final ClothingItemForm itemForm = new ClothingItemForm();
     private final PhotoEditor photoEditor = new PhotoEditor("No photo saved");
     private final NotificationBanner notificationBanner = new NotificationBanner();
+    private final Button removePhotoButton = new Button("Remove photo");
 
     private File selectedPhotoFile;
+    private boolean removePhotoRequested;
 
     public EditItemPage(Stage owner, SavedClothingItem item, Runnable onBack, Runnable onSaved) {
         this.owner = owner;
@@ -77,14 +79,18 @@ public class EditItemPage extends ScrollPane {
     }
 
     private VBox createPhotoCard() {
-        showExistingPhoto();
-
         Button choosePhotoButton = new Button("Replace photo");
         choosePhotoButton.setMaxWidth(Double.MAX_VALUE);
         choosePhotoButton.setStyle(UiStyles.PRIMARY_BUTTON);
         choosePhotoButton.setOnAction(event -> choosePhoto());
 
-        VBox card = new VBox(12, createCardTitle("Photo"), photoEditor, choosePhotoButton);
+        removePhotoButton.setMaxWidth(Double.MAX_VALUE);
+        removePhotoButton.setStyle(UiStyles.SMALL_DANGER_BUTTON);
+        removePhotoButton.setOnAction(event -> removePhoto());
+
+        showExistingPhoto();
+
+        VBox card = new VBox(12, createCardTitle("Photo"), photoEditor, choosePhotoButton, removePhotoButton);
         card.setAlignment(Pos.TOP_CENTER);
         card.setPadding(new Insets(18));
         card.setPrefWidth(280);
@@ -132,14 +138,17 @@ public class EditItemPage extends ScrollPane {
         if (item.hasPhoto() && Files.exists(item.photoPath())) {
             try {
                 photoEditor.loadPhoto(item.photoPath(), false);
+                updateRemovePhotoButton();
             } catch (IOException exception) {
                 photoEditor.clear();
+                updateRemovePhotoButton();
                 showNotification("Could not load current photo: " + exception.getMessage(), true);
             }
             return;
         }
 
         photoEditor.clear();
+        updateRemovePhotoButton();
     }
 
     private void choosePhoto() {
@@ -151,10 +160,27 @@ public class EditItemPage extends ScrollPane {
         try {
             photoEditor.loadPhoto(selectedFile.toPath(), true);
             selectedPhotoFile = selectedFile;
+            removePhotoRequested = false;
+            updateRemovePhotoButton();
             showNotification("Photo selected: " + selectedFile.getName(), false);
         } catch (IOException exception) {
             showNotification("Could not load photo: " + exception.getMessage(), true);
         }
+    }
+
+    private void removePhoto() {
+        if (!photoEditor.hasImage() && selectedPhotoFile == null) {
+            return;
+        }
+
+        selectedPhotoFile = null;
+        removePhotoRequested = item.hasPhoto();
+        photoEditor.clear();
+        updateRemovePhotoButton();
+        showNotification(
+                removePhotoRequested ? "Photo removed. Save changes to update the item." : "Photo removed.",
+                false
+        );
     }
 
     private void saveItem() {
@@ -162,9 +188,14 @@ public class EditItemPage extends ScrollPane {
 
         try {
             editedPhotoPath = createEditedPhotoPath();
-            StoredClothingItem storedItem = memoryStore.update(item.id(), itemForm.createDraft(editedPhotoPath));
+            StoredClothingItem storedItem = memoryStore.update(
+                    item.id(),
+                    itemForm.createDraft(editedPhotoPath, removePhotoRequested)
+            );
             selectedPhotoFile = null;
+            removePhotoRequested = false;
             photoEditor.markClean();
+            updateRemovePhotoButton();
             onSaved.run();
             setSaveStatus("Updated " + memoryStore.toProjectRelativePath(storedItem.itemJsonPath()) + ".", false);
         } catch (IOException exception) {
@@ -176,6 +207,9 @@ public class EditItemPage extends ScrollPane {
 
     private Path createEditedPhotoPath() throws IOException {
         if (!photoEditor.hasImage()) {
+            return null;
+        }
+        if (removePhotoRequested) {
             return null;
         }
         if (selectedPhotoFile == null && !photoEditor.isDirty()) {
@@ -205,6 +239,10 @@ public class EditItemPage extends ScrollPane {
 
     private void showNotification(String text, boolean isError) {
         notificationBanner.showMessage(text, isError);
+    }
+
+    private void updateRemovePhotoButton() {
+        removePhotoButton.setDisable(!photoEditor.hasImage());
     }
 
     private String createItemTitle() {

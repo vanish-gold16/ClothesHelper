@@ -311,19 +311,31 @@ public class ClothingMemoryStore {
     }
 
     private Path updatePhoto(ClothingItemDraft draft, Path itemDirectory, Path existingPhotoPath) throws IOException {
+        if (draft.removePhoto()) {
+            deleteExistingPhoto(itemDirectory, existingPhotoPath);
+            return null;
+        }
+
         if (draft.sourcePhotoPath() == null) {
             return existingPhotoPath;
         }
 
         Path updatedPhotoPath = copyPhoto(draft, itemDirectory);
-        if (existingPhotoPath != null) {
-            Path normalizedExistingPhotoPath = existingPhotoPath.toAbsolutePath().normalize();
-            if (normalizedExistingPhotoPath.startsWith(itemDirectory.toAbsolutePath().normalize())
-                    && !normalizedExistingPhotoPath.equals(updatedPhotoPath.toAbsolutePath().normalize())) {
-                Files.deleteIfExists(normalizedExistingPhotoPath);
-            }
+        if (existingPhotoPath != null && !existingPhotoPath.toAbsolutePath().normalize().equals(updatedPhotoPath.toAbsolutePath().normalize())) {
+            deleteExistingPhoto(itemDirectory, existingPhotoPath);
         }
         return updatedPhotoPath;
+    }
+
+    private void deleteExistingPhoto(Path itemDirectory, Path existingPhotoPath) throws IOException {
+        if (existingPhotoPath == null) {
+            return;
+        }
+
+        Path normalizedExistingPhotoPath = existingPhotoPath.toAbsolutePath().normalize();
+        if (normalizedExistingPhotoPath.startsWith(itemDirectory.toAbsolutePath().normalize())) {
+            Files.deleteIfExists(normalizedExistingPhotoPath);
+        }
     }
 
     private String getExtension(Path path) {

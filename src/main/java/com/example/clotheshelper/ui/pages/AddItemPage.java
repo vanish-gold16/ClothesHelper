@@ -31,6 +31,7 @@ public class AddItemPage extends ScrollPane {
     private final ClothingItemForm itemForm = new ClothingItemForm();
     private final PhotoEditor photoEditor = new PhotoEditor("No photo selected");
     private final NotificationBanner notificationBanner = new NotificationBanner();
+    private final Button removePhotoButton = new Button("Remove photo");
 
     private File selectedPhotoFile;
 
@@ -72,7 +73,12 @@ public class AddItemPage extends ScrollPane {
         choosePhotoButton.setStyle(UiStyles.PRIMARY_BUTTON);
         choosePhotoButton.setOnAction(event -> choosePhoto());
 
-        VBox card = new VBox(12, createCardTitle("Photo"), photoEditor, choosePhotoButton);
+        removePhotoButton.setMaxWidth(Double.MAX_VALUE);
+        removePhotoButton.setDisable(true);
+        removePhotoButton.setStyle(UiStyles.SMALL_DANGER_BUTTON);
+        removePhotoButton.setOnAction(event -> removePhoto());
+
+        VBox card = new VBox(12, createCardTitle("Photo"), photoEditor, choosePhotoButton, removePhotoButton);
         card.setAlignment(Pos.TOP_CENTER);
         card.setPadding(new Insets(18));
         card.setPrefWidth(280);
@@ -110,10 +116,22 @@ public class AddItemPage extends ScrollPane {
         try {
             photoEditor.loadPhoto(selectedFile.toPath(), true);
             selectedPhotoFile = selectedFile;
+            removePhotoButton.setDisable(false);
             showNotification("Photo selected: " + selectedFile.getName(), false);
         } catch (IOException exception) {
             showNotification("Could not load photo: " + exception.getMessage(), true);
         }
+    }
+
+    private void removePhoto() {
+        if (selectedPhotoFile == null && !photoEditor.hasImage()) {
+            return;
+        }
+
+        selectedPhotoFile = null;
+        photoEditor.clear();
+        removePhotoButton.setDisable(true);
+        showNotification("Photo removed.", false);
     }
 
     private void saveItem() {
@@ -172,5 +190,6 @@ public class AddItemPage extends ScrollPane {
         selectedPhotoFile = null;
         itemForm.clear();
         photoEditor.clear();
+        removePhotoButton.setDisable(true);
     }
 }

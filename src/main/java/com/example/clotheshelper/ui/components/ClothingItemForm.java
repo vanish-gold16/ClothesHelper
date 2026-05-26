@@ -51,6 +51,10 @@ public class ClothingItemForm extends GridPane {
     }
 
     public ClothingItemDraft createDraft(Path sourcePhotoPath) {
+        return createDraft(sourcePhotoPath, false);
+    }
+
+    public ClothingItemDraft createDraft(Path sourcePhotoPath, boolean removePhoto) {
         return new ClothingItemDraft(
                 nameField.getText(),
                 clothingTypeField.getValue(),
@@ -61,7 +65,8 @@ public class ClothingItemForm extends GridPane {
                 wearOccasionField.getValue(),
                 vibeField.getValue(),
                 notesField.getText(),
-                sourcePhotoPath
+                sourcePhotoPath,
+                removePhoto
         );
     }
 
