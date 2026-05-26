@@ -1,4 +1,4 @@
-package com.example.clotheshelper.ui;
+package com.example.clotheshelper.ui.theme;
 
 public enum AppTheme {
     LIGHT(

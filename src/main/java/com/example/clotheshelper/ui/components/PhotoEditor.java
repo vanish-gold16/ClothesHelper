@@ -1,5 +1,6 @@
 package com.example.clotheshelper.ui.components;
 
+import com.example.clotheshelper.ui.styles.UiStyles;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
@@ -62,10 +63,7 @@ public class PhotoEditor extends VBox {
         previewFrame.setMinSize(PREVIEW_SIZE, PREVIEW_SIZE);
         previewFrame.setPrefSize(PREVIEW_SIZE, PREVIEW_SIZE);
         previewFrame.setMaxSize(PREVIEW_SIZE, PREVIEW_SIZE);
-        previewFrame.setStyle("-fx-background-color: -app-muted-surface;"
-                + "-fx-border-color: -app-border;"
-                + "-fx-border-radius: 8;"
-                + "-fx-background-radius: 8;");
+        previewFrame.setStyle(UiStyles.PHOTO_FRAME);
 
         zoomSlider.setMaxWidth(Double.MAX_VALUE);
         zoomSlider.setDisable(true);
@@ -78,11 +76,7 @@ public class PhotoEditor extends VBox {
         });
 
         resetButton.setDisable(true);
-        resetButton.setStyle("-fx-background-color: -app-secondary-background;"
-                + "-fx-text-fill: -app-secondary-text;"
-                + "-fx-font-size: 13px;"
-                + "-fx-padding: 7 10;"
-                + "-fx-background-radius: 6;");
+        resetButton.setStyle(UiStyles.SMALL_SECONDARY_BUTTON);
         resetButton.setOnAction(event -> resetCrop(true));
 
         HBox controls = new HBox(10, createZoomLabel(), zoomSlider, resetButton);
@@ -161,13 +155,13 @@ public class PhotoEditor extends VBox {
 
     private Label createPlaceholder() {
         Label placeholder = new Label(placeholderText);
-        placeholder.setStyle("-fx-font-size: 14px; -fx-text-fill: -app-muted-text;");
+        placeholder.setStyle(UiStyles.SUBTITLE);
         return placeholder;
     }
 
     private Label createZoomLabel() {
         Label zoomLabel = new Label("Zoom");
-        zoomLabel.setStyle("-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: -app-muted-text;");
+        zoomLabel.setStyle(UiStyles.FIELD_LABEL);
         return zoomLabel;
     }
 

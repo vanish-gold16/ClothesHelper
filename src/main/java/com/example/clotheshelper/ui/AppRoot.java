@@ -6,6 +6,9 @@ import com.example.clotheshelper.ui.pages.EditItemPage;
 import com.example.clotheshelper.ui.pages.LibraryPage;
 import com.example.clotheshelper.ui.pages.SettingsPage;
 import com.example.clotheshelper.ui.pages.SimplePage;
+import com.example.clotheshelper.ui.styles.UiStyles;
+import com.example.clotheshelper.ui.theme.AppTheme;
+import com.example.clotheshelper.ui.theme.ThemePreferences;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -20,39 +23,21 @@ import javafx.stage.Stage;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.prefs.Preferences;
 
 public class AppRoot extends BorderPane {
     private static final double NAVIGATION_HEIGHT = 64;
-    private static final String THEME_PREFERENCE_KEY = "theme";
-
-    private static final String DEFAULT_BUTTON_STYLE = "-fx-background-color: transparent;"
-            + "-fx-text-fill: -app-muted-text;"
-            + "-fx-font-size: 14px;"
-            + "-fx-padding: 12 16;"
-            + "-fx-background-insets: 0;"
-            + "-fx-border-width: 0;"
-            + "-fx-background-radius: 0;";
-
-    private static final String ACTIVE_BUTTON_STYLE = "-fx-background-color: -app-primary;"
-            + "-fx-text-fill: -app-on-primary;"
-            + "-fx-font-size: 14px;"
-            + "-fx-padding: 12 16;"
-            + "-fx-background-insets: 0;"
-            + "-fx-border-width: 0;"
-            + "-fx-background-radius: 0;";
 
     private final StackPane pageContainer = new StackPane();
     private final Map<String, Node> pages = new LinkedHashMap<>();
     private final Map<String, Button> navigationButtons = new LinkedHashMap<>();
-    private final Preferences preferences = Preferences.userNodeForPackage(AppRoot.class);
+    private final ThemePreferences themePreferences = new ThemePreferences(AppRoot.class);
     private HBox navigation;
     private AppTheme currentTheme;
     private String activePageName = "Home";
     private LibraryPage libraryPage;
 
     public AppRoot(Stage owner) {
-        currentTheme = loadTheme();
+        currentTheme = themePreferences.load();
         setCenter(pageContainer);
         navigation = createNavigation();
         setBottom(navigation);
@@ -106,12 +91,12 @@ public class AppRoot extends BorderPane {
         button.setMinHeight(NAVIGATION_HEIGHT);
         button.setPrefHeight(NAVIGATION_HEIGHT);
         button.setMaxHeight(Double.MAX_VALUE);
-        button.setStyle(DEFAULT_BUTTON_STYLE);
+        button.setStyle(UiStyles.NAVIGATION_BUTTON);
         button.setOnAction(event -> selectPage(pageName));
 
         if (hasPlusIcon) {
             Label plusIcon = new Label("+");
-            plusIcon.setStyle(createPlusIconStyle(false));
+            plusIcon.setStyle(UiStyles.navigationIcon(false));
             button.setGraphic(plusIcon);
             button.setContentDisplay(ContentDisplay.TOP);
             button.setGraphicTextGap(2);
@@ -141,22 +126,17 @@ public class AppRoot extends BorderPane {
         for (Map.Entry<String, Button> entry : navigationButtons.entrySet()) {
             boolean isActive = entry.getKey().equals(activePageName);
             Button button = entry.getValue();
-            button.setStyle(isActive ? ACTIVE_BUTTON_STYLE : DEFAULT_BUTTON_STYLE);
+            button.setStyle(isActive ? UiStyles.ACTIVE_NAVIGATION_BUTTON : UiStyles.NAVIGATION_BUTTON);
 
             if (button.getGraphic() instanceof Label plusIcon) {
-                plusIcon.setStyle(createPlusIconStyle(isActive));
+                plusIcon.setStyle(UiStyles.navigationIcon(isActive));
             }
         }
     }
 
-    private String createPlusIconStyle(boolean isActive) {
-        String iconColor = isActive ? "-app-on-primary" : "-app-muted-text";
-        return "-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: " + iconColor + ";";
-    }
-
     private void setTheme(AppTheme theme) {
         currentTheme = theme;
-        preferences.put(THEME_PREFERENCE_KEY, theme.name());
+        themePreferences.save(theme);
         applyTheme(theme);
     }
 
@@ -169,17 +149,7 @@ public class AppRoot extends BorderPane {
     }
 
     private String createNavigationStyle() {
-        return "-fx-background-color: -app-muted-surface;"
-                + "-fx-border-color: -app-border;"
-                + "-fx-border-width: 1 0 0 0;";
+        return UiStyles.NAVIGATION_BAR;
     }
 
-    private AppTheme loadTheme() {
-        String themeName = preferences.get(THEME_PREFERENCE_KEY, AppTheme.LIGHT.name());
-        try {
-            return AppTheme.valueOf(themeName);
-        } catch (IllegalArgumentException exception) {
-            return AppTheme.LIGHT;
-        }
-    }
 }

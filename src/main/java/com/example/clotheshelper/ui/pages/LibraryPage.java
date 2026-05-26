@@ -2,7 +2,9 @@ package com.example.clotheshelper.ui.pages;
 
 import com.example.clotheshelper.storage.ClothingMemoryStore;
 import com.example.clotheshelper.storage.SavedClothingItem;
+import com.example.clotheshelper.ui.components.PageHeader;
 import com.example.clotheshelper.ui.components.PhotoImageLoader;
+import com.example.clotheshelper.ui.styles.UiStyles;
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -18,7 +20,6 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 
@@ -34,22 +35,6 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 public class LibraryPage extends ScrollPane {
-    private static final String CARD_STYLE = "-fx-background-color: -app-surface;"
-            + "-fx-border-color: -app-border;"
-            + "-fx-border-radius: 10;"
-            + "-fx-background-radius: 10;";
-
-    private static final String INPUT_STYLE = "-fx-font-size: 14px;"
-            + "-fx-padding: 8 10;"
-            + "-fx-text-fill: -app-text;"
-            + "-fx-prompt-text-fill: -app-muted-text;"
-            + "-fx-control-inner-background: -app-surface;"
-            + "-fx-background-color: -app-muted-surface;"
-            + "-fx-border-color: -app-border;"
-            + "-fx-border-radius: 6;"
-            + "-fx-background-radius: 6;";
-
-    private static final String MUTED_TEXT_STYLE = "-fx-font-size: 13px; -fx-text-fill: -app-muted-text;";
     private static final double LAYOUT_MAX_WIDTH = 1240;
     private static final String ALL_TYPES = "All types";
     private static final String ALL_COLORS = "All colors";
@@ -82,7 +67,7 @@ public class LibraryPage extends ScrollPane {
         VBox pageContent = new VBox(24, createHeader(), createLibraryLayout());
         pageContent.setAlignment(Pos.TOP_CENTER);
         pageContent.setPadding(new Insets(32));
-        pageContent.setStyle("-fx-background-color: -app-background;");
+        pageContent.setStyle(UiStyles.PAGE_BACKGROUND);
 
         itemGrid.setAlignment(Pos.TOP_LEFT);
         itemGrid.setHgap(16);
@@ -91,7 +76,7 @@ public class LibraryPage extends ScrollPane {
 
         setContent(pageContent);
         setFitToWidth(true);
-        setStyle("-fx-background: -app-background; -fx-background-color: -app-background;");
+        setStyle(UiStyles.SCROLL_PAGE_BACKGROUND);
 
         refreshItems();
     }
@@ -113,29 +98,13 @@ public class LibraryPage extends ScrollPane {
     }
 
     private HBox createHeader() {
-        Label titleLabel = new Label("Library");
-        titleLabel.setStyle("-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: -app-text;");
-
-        summaryLabel.setStyle(MUTED_TEXT_STYLE);
-
-        VBox text = new VBox(6, titleLabel, summaryLabel);
-        text.setAlignment(Pos.CENTER_LEFT);
+        summaryLabel.setStyle(UiStyles.MUTED_TEXT);
 
         Button refreshButton = new Button("Refresh");
-        refreshButton.setStyle("-fx-background-color: -app-primary;"
-                + "-fx-text-fill: -app-on-primary;"
-                + "-fx-font-size: 14px;"
-                + "-fx-padding: 10 16;"
-                + "-fx-background-radius: 6;");
+        refreshButton.setStyle(UiStyles.PRIMARY_BUTTON);
         refreshButton.setOnAction(event -> refreshItems());
 
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-
-        HBox header = new HBox(16, text, spacer, refreshButton);
-        header.setAlignment(Pos.CENTER_LEFT);
-        header.setMaxWidth(LAYOUT_MAX_WIDTH);
-        return header;
+        return new PageHeader("Library", summaryLabel, LAYOUT_MAX_WIDTH, refreshButton);
     }
 
     private HBox createLibraryLayout() {
@@ -154,7 +123,7 @@ public class LibraryPage extends ScrollPane {
 
     private VBox createFilterPanel() {
         Label title = new Label("Sort & filter");
-        title.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: -app-text;");
+        title.setStyle(UiStyles.CARD_TITLE);
 
         VBox filters = new VBox(12,
                 createFilterField("Sort", sortField),
@@ -170,11 +139,7 @@ public class LibraryPage extends ScrollPane {
 
         Button clearButton = new Button("Clear filters");
         clearButton.setMaxWidth(Double.MAX_VALUE);
-        clearButton.setStyle("-fx-background-color: -app-secondary-background;"
-                + "-fx-text-fill: -app-secondary-text;"
-                + "-fx-font-size: 13px;"
-                + "-fx-padding: 8 12;"
-                + "-fx-background-radius: 6;");
+        clearButton.setStyle(UiStyles.SMALL_SECONDARY_BUTTON);
         clearButton.setOnAction(event -> clearFilters());
 
         VBox panel = new VBox(16, title, filters, clearButton);
@@ -183,13 +148,13 @@ public class LibraryPage extends ScrollPane {
         panel.setPrefWidth(260);
         panel.setMinWidth(240);
         panel.setMaxWidth(260);
-        panel.setStyle(CARD_STYLE);
+        panel.setStyle(UiStyles.CARD);
         return panel;
     }
 
     private VBox createFilterField(String labelText, Node input) {
         Label label = new Label(labelText);
-        label.setStyle("-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: -app-muted-text;");
+        label.setStyle(UiStyles.FIELD_LABEL);
 
         VBox field = new VBox(6, label, input);
         field.setAlignment(Pos.TOP_LEFT);
@@ -201,7 +166,7 @@ public class LibraryPage extends ScrollPane {
         Label title = new Label(createItemTitle(item));
         title.setMaxWidth(Double.MAX_VALUE);
         title.setWrapText(true);
-        title.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: -app-text;");
+        title.setStyle(UiStyles.ITEM_TITLE);
 
         VBox details = new VBox(4);
         addDetail(details, "Type", item.clothingType());
@@ -218,7 +183,7 @@ public class LibraryPage extends ScrollPane {
         card.setPadding(new Insets(14));
         card.setPrefWidth(220);
         card.setMaxWidth(220);
-        card.setStyle(CARD_STYLE);
+        card.setStyle(UiStyles.CARD);
         return card;
     }
 
@@ -226,10 +191,7 @@ public class LibraryPage extends ScrollPane {
         StackPane preview = new StackPane();
         preview.setPrefSize(192, 220);
         preview.setMaxSize(192, 220);
-        preview.setStyle("-fx-background-color: -app-muted-surface;"
-                + "-fx-border-color: -app-border;"
-                + "-fx-border-radius: 8;"
-                + "-fx-background-radius: 8;");
+        preview.setStyle(UiStyles.PHOTO_FRAME);
 
         if (item.hasPhoto() && Files.exists(item.photoPath())) {
             try {
@@ -243,7 +205,7 @@ public class LibraryPage extends ScrollPane {
                 unavailableLabel.setWrapText(true);
                 unavailableLabel.setMaxWidth(150);
                 unavailableLabel.setAlignment(Pos.CENTER);
-                unavailableLabel.setStyle(MUTED_TEXT_STYLE);
+                unavailableLabel.setStyle(UiStyles.MUTED_TEXT);
                 preview.getChildren().add(unavailableLabel);
             }
             return preview;
@@ -254,14 +216,9 @@ public class LibraryPage extends ScrollPane {
         placeholderLabel.setWrapText(true);
         placeholderLabel.setMaxWidth(150);
         placeholderLabel.setAlignment(Pos.CENTER);
-        placeholderLabel.setStyle("-fx-font-size: 15px;"
-                + "-fx-font-weight: bold;"
-                + "-fx-text-fill: " + readableTextColor(color) + ";");
+        placeholderLabel.setStyle(UiStyles.previewLabel(readableTextColor(color)));
 
-        preview.setStyle("-fx-background-color: " + color + ";"
-                + "-fx-border-color: -app-border;"
-                + "-fx-border-radius: 8;"
-                + "-fx-background-radius: 8;");
+        preview.setStyle(UiStyles.previewBackground(color));
         preview.getChildren().add(placeholderLabel);
         return preview;
     }
@@ -281,11 +238,7 @@ public class LibraryPage extends ScrollPane {
     private Button createEditButton(SavedClothingItem item) {
         Button editButton = new Button("Edit");
         editButton.setMaxWidth(Double.MAX_VALUE);
-        editButton.setStyle("-fx-background-color: -app-info-background;"
-                + "-fx-text-fill: -app-info-text;"
-                + "-fx-font-size: 13px;"
-                + "-fx-padding: 8 12;"
-                + "-fx-background-radius: 6;");
+        editButton.setStyle(UiStyles.SMALL_INFO_BUTTON);
         editButton.setOnAction(event -> editHandler.accept(item));
         return editButton;
     }
@@ -293,11 +246,7 @@ public class LibraryPage extends ScrollPane {
     private Button createDeleteButton(SavedClothingItem item) {
         Button deleteButton = new Button("Delete");
         deleteButton.setMaxWidth(Double.MAX_VALUE);
-        deleteButton.setStyle("-fx-background-color: -app-danger-background;"
-                + "-fx-text-fill: -app-danger-text;"
-                + "-fx-font-size: 13px;"
-                + "-fx-padding: 8 12;"
-                + "-fx-background-radius: 6;");
+        deleteButton.setStyle(UiStyles.SMALL_DANGER_BUTTON);
         deleteButton.setOnAction(event -> deleteItem(item));
         return deleteButton;
     }
@@ -333,13 +282,13 @@ public class LibraryPage extends ScrollPane {
     private VBox createMessageCard(String message) {
         Label messageLabel = new Label(message);
         messageLabel.setWrapText(true);
-        messageLabel.setStyle(MUTED_TEXT_STYLE);
+        messageLabel.setStyle(UiStyles.MUTED_TEXT);
 
         VBox card = new VBox(messageLabel);
         card.setAlignment(Pos.CENTER_LEFT);
         card.setPadding(new Insets(18));
         card.setPrefWidth(320);
-        card.setStyle(CARD_STYLE);
+        card.setStyle(UiStyles.CARD);
         return card;
     }
 
@@ -347,7 +296,7 @@ public class LibraryPage extends ScrollPane {
         TextField textField = new TextField();
         textField.setPromptText(promptText);
         textField.setMaxWidth(Double.MAX_VALUE);
-        textField.setStyle(INPUT_STYLE);
+        textField.setStyle(UiStyles.INPUT);
         textField.textProperty().addListener((observable, oldValue, newValue) -> renderFilteredItems());
         return textField;
     }
@@ -356,11 +305,7 @@ public class LibraryPage extends ScrollPane {
         ComboBox<SortOption> comboBox = new ComboBox<>(FXCollections.observableArrayList(SortOption.values()));
         comboBox.setValue(SortOption.NEWEST_FIRST);
         comboBox.setMaxWidth(Double.MAX_VALUE);
-        comboBox.setStyle("-fx-font-size: 14px;"
-                + "-fx-background-color: -app-muted-surface;"
-                + "-fx-border-color: -app-border;"
-                + "-fx-border-radius: 6;"
-                + "-fx-background-radius: 6;");
+        comboBox.setStyle(UiStyles.COMBO_BOX);
         comboBox.valueProperty().addListener((observable, oldValue, newValue) -> renderFilteredItems());
         return comboBox;
     }
@@ -369,11 +314,7 @@ public class LibraryPage extends ScrollPane {
         ComboBox<String> comboBox = new ComboBox<>(FXCollections.observableArrayList(allValue));
         comboBox.setValue(allValue);
         comboBox.setMaxWidth(Double.MAX_VALUE);
-        comboBox.setStyle("-fx-font-size: 14px;"
-                + "-fx-background-color: -app-muted-surface;"
-                + "-fx-border-color: -app-border;"
-                + "-fx-border-radius: 6;"
-                + "-fx-background-radius: 6;");
+        comboBox.setStyle(UiStyles.COMBO_BOX);
         comboBox.valueProperty().addListener((observable, oldValue, newValue) -> renderFilteredItems());
         return comboBox;
     }
@@ -512,7 +453,7 @@ public class LibraryPage extends ScrollPane {
 
         Label detail = new Label(label + ": " + value);
         detail.setWrapText(true);
-        detail.setStyle(MUTED_TEXT_STYLE);
+        detail.setStyle(UiStyles.MUTED_TEXT);
         details.getChildren().add(detail);
     }
 
