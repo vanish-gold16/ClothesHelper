@@ -8,7 +8,7 @@ import javafx.stage.Stage;
 public class ClothesHelperApplication extends Application {
     @Override
     public void start(Stage stage) {
-        Scene scene = new Scene(new AppRoot(stage), 800, 600);
+        Scene scene = new Scene(new AppRoot(stage), 850, 600);
 
         stage.setTitle("ClothesHelper");
         stage.setMinWidth(640);
