@@ -3,10 +3,10 @@ package com.example.clotheshelper.ui;
 import com.example.clotheshelper.storage.SavedClothingItem;
 import com.example.clotheshelper.ui.pages.AddItemPage;
 import com.example.clotheshelper.ui.pages.EditItemPage;
+import com.example.clotheshelper.ui.pages.HomePage;
 import com.example.clotheshelper.ui.pages.LibraryPage;
 import com.example.clotheshelper.ui.pages.ProfilePage;
 import com.example.clotheshelper.ui.pages.SettingsPage;
-import com.example.clotheshelper.ui.pages.SimplePage;
 import com.example.clotheshelper.ui.styles.UiStyles;
 import com.example.clotheshelper.ui.theme.AppTheme;
 import com.example.clotheshelper.ui.theme.ThemePreferences;
@@ -48,7 +48,8 @@ public class AppRoot extends BorderPane {
     }
 
     private void createPages(Stage owner) {
-        pages.put("Home", new SimplePage("Home", "This will be the main screen of the app."));
+        HomePage homePage = new HomePage();
+        pages.put("Home", homePage);
         libraryPage = new LibraryPage(item -> showEditPage(owner, item));
         pages.put("Library", libraryPage);
         pages.put("Add", new AddItemPage(owner));
@@ -116,6 +117,12 @@ public class AppRoot extends BorderPane {
 
         if (page instanceof LibraryPage libraryPage) {
             libraryPage.refreshItems();
+        }
+        if (page instanceof HomePage homePage) {
+            homePage.refreshWeather();
+        }
+        if (page instanceof ProfilePage profilePage) {
+            profilePage.refreshStats();
         }
 
         pageContainer.getChildren().setAll(page);
