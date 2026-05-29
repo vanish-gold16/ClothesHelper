@@ -42,6 +42,8 @@ public class ProfilePage extends ScrollPane {
     private final Label favoriteColorValueLabel = new Label();
     private final Label favoriteColorCountLabel = new Label();
     private final StackPane favoriteColorSwatch = new StackPane();
+    private final Label favoriteBrandValueLabel = new Label();
+    private final Label favoriteBrandCountLabel = new Label();
 
     public ProfilePage() {
         VBox pageContent = new VBox(24,
@@ -62,12 +64,15 @@ public class ProfilePage extends ScrollPane {
             List<SavedClothingItem> items = memoryStore.loadAll();
             totalItemsValueLabel.setText(String.valueOf(items.size()));
             showFavoriteColor(findFavoriteColor(items));
+            showFavoriteBrand(findFavoriteBrand(items));
         } catch (IOException exception) {
             totalItemsValueLabel.setText("Unavailable");
             favoriteColorValueLabel.setText("Could not load");
             favoriteColorCountLabel.setText(exception.getMessage());
             favoriteColorSwatch.setVisible(false);
             favoriteColorSwatch.setManaged(false);
+            favoriteBrandValueLabel.setText("Could not load");
+            favoriteBrandCountLabel.setText(exception.getMessage());
         }
     }
 
@@ -108,7 +113,11 @@ public class ProfilePage extends ScrollPane {
         favoriteColorSwatch.setPrefSize(18, 18);
         favoriteColorSwatch.setMaxSize(18, 18);
 
-        VBox section = new VBox(12, sectionLabel, createTotalItemsRow(), createFavoriteColorRow());
+        favoriteBrandValueLabel.setStyle(STAT_VALUE_STYLE);
+        favoriteBrandCountLabel.setStyle(UiStyles.MUTED_TEXT);
+        favoriteBrandCountLabel.setWrapText(true);
+
+        VBox section = new VBox(12, sectionLabel, createTotalItemsRow(), createFavoriteColorRow(), createFavoriteBrandRow());
         section.setAlignment(Pos.TOP_LEFT);
         section.setMaxWidth(Double.MAX_VALUE);
         return section;
@@ -126,6 +135,12 @@ public class ProfilePage extends ScrollPane {
         colorValue.setAlignment(Pos.CENTER_RIGHT);
 
         return createStatRow("Favorite color", colorValue);
+    }
+
+    private HBox createFavoriteBrandRow() {
+        VBox brandText = new VBox(2, favoriteBrandValueLabel, favoriteBrandCountLabel);
+        brandText.setAlignment(Pos.CENTER_RIGHT);
+        return createStatRow("Favorite brand", brandText);
     }
 
     private HBox createStatRow(String labelText, Node value) {
@@ -227,6 +242,41 @@ public class ProfilePage extends ScrollPane {
                 .findFirst();
     }
 
+    private Optional<BrandCount> findFavoriteBrand(List<SavedClothingItem> items) {
+        Map<String, BrandCount> brandCounts = new LinkedHashMap<>();
+        for (SavedClothingItem item : items) {
+            String brandLabel = cleanText(item.brand());
+            if (brandLabel == null) {
+                continue;
+            }
+
+            String brandKey = brandLabel.toLowerCase(Locale.ROOT);
+            BrandCount current = brandCounts.get(brandKey);
+            if (current == null) {
+                brandCounts.put(brandKey, new BrandCount(brandLabel, 1));
+            } else {
+                brandCounts.put(brandKey, new BrandCount(current.label(), current.count() + 1));
+            }
+        }
+
+        return brandCounts.values().stream()
+                .sorted(Comparator.comparingInt(BrandCount::count).reversed()
+                        .thenComparing(BrandCount::label, String.CASE_INSENSITIVE_ORDER))
+                .findFirst();
+    }
+
+    private void showFavoriteBrand(Optional<BrandCount> favoriteBrand) {
+        if (favoriteBrand.isEmpty()) {
+            favoriteBrandValueLabel.setText("No brand yet");
+            favoriteBrandCountLabel.setText("Add brands to items.");
+            return;
+        }
+
+        BrandCount brand = favoriteBrand.get();
+        favoriteBrandValueLabel.setText(brand.label());
+        favoriteBrandCountLabel.setText(pluralizeItems(brand.count()));
+    }
+
     private String pluralizeItems(int count) {
         return count == 1 ? "1 item" : count + " items";
     }
@@ -246,5 +296,8 @@ public class ProfilePage extends ScrollPane {
     }
 
     private record ColorCount(String label, String hex, int count) {
+    }
+
+    private record BrandCount(String label, int count) {
     }
 }
