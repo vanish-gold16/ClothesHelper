@@ -18,9 +18,10 @@ public final class OutfitRecommendationService {
     // Only items scoring within this margin of the best are treated as interchangeable
     // and rotated through on repeated "Generate" presses. If everything else is further
     // behind than this, the single best item is returned every time (no forced change).
-    // The margin is wide enough to keep adjacent-style items in the mix, while the
-    // style-clash penalty (see styleScore) pushes clashing items past it.
-    private static final int VARIETY_MARGIN = 40;
+    // The margin is wide enough to rotate between different but still sensible types
+    // (e.g. sneakers and loafers on a warm day) and to keep adjacent-style items in the
+    // mix, while the style-clash penalty (see styleScore) pushes clashing items past it.
+    private static final int VARIETY_MARGIN = 60;
 
     public Recommendation generate(List<SavedClothingItem> items, WeatherSnapshot weather) {
         return generate(items, weather, 0, OutfitPattern.RANDOM, OutfitStyle.ANY);
@@ -869,12 +870,14 @@ public final class OutfitRecommendationService {
 
         // Distance 0/1 stay within VARIETY_MARGIN of each other so the chosen style and
         // its neighbour can be mixed and rotated. Distance 2/3 are pushed well past the
-        // margin so a clashing piece only appears when nothing on-style is available.
+        // margin - deep enough that a clashing piece stays out of the rotation even when
+        // the only on-style option scores low for the weather (e.g. formal boots in
+        // summer) - so it appears only when nothing on-style exists at all.
         return switch (Math.abs(styleRank - vibeRank)) {
             case 0 -> 70;
             case 1 -> 35;
-            case 2 -> -40;
-            default -> -85;
+            case 2 -> -65;
+            default -> -110;
         };
     }
 
