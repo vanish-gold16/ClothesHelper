@@ -17,6 +17,9 @@ public final class OutfitRecommendationService {
     // repeated "Generate" presses can rotate between them instead of always
     // returning the single highest scorer.
     private static final int VARIETY_MARGIN = 20;
+    // Always allow rotating through at least this many top-scoring items per slot, even
+    // if they sit outside VARIETY_MARGIN, so regeneration can always offer an alternative.
+    private static final int MIN_ROTATION_CANDIDATES = 3;
 
     public Recommendation generate(List<SavedClothingItem> items, WeatherSnapshot weather) {
         return generate(items, weather, 0);
@@ -110,14 +113,18 @@ public final class OutfitRecommendationService {
             return Optional.empty();
         }
 
-        // Keep the items that score within a small margin of the best one, then rotate
-        // between them based on the requested variant so pressing "Generate" again can
-        // surface a different but still sensible choice.
+        // Build the pool we rotate through when "Regenerate" is pressed. Variant 0 is
+        // always the highest scorer. We keep every item within a small margin of the
+        // best, but also always keep at least the top few even if they fall outside the
+        // margin, so any slot that has more than one usable item will swap on the next
+        // press. That guarantees a regeneration changes at least one piece whenever the
+        // wardrobe has the spare items to do so.
         candidates.sort(Comparator.comparingInt(ScoredItem::score).reversed());
         int bestScore = candidates.get(0).score();
         List<ScoredItem> topCandidates = new ArrayList<>();
-        for (ScoredItem candidate : candidates) {
-            if (candidate.score() >= bestScore - VARIETY_MARGIN) {
+        for (int index = 0; index < candidates.size(); index++) {
+            ScoredItem candidate = candidates.get(index);
+            if (index < MIN_ROTATION_CANDIDATES || candidate.score() >= bestScore - VARIETY_MARGIN) {
                 topCandidates.add(candidate);
             }
         }
