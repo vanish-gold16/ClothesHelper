@@ -48,6 +48,23 @@
     -fx-padding: 0;
 }
 
+/* ===== ComboBox — selected value (button cell) ===== */
+
+.combo-box > .list-cell {
+    -fx-text-fill: -app-text;
+    -fx-background-color: transparent;
+}
+
+.combo-box > .arrow-button {
+    -fx-background-color: transparent;
+}
+
+.combo-box > .arrow-button > .arrow {
+    -fx-background-color: -app-muted-text;
+}
+
+/* ===== ComboBox — dropdown popup ===== */
+
 .combo-box-popup .list-view {
     -fx-background-color: -app-surface;
     -fx-control-inner-background: -app-surface;
@@ -106,4 +123,121 @@
 .combo-box-popup .list-view .scroll-bar .decrement-arrow {
     -fx-background-color: -app-muted-text;
     -fx-padding: 0;
+}
+
+/* ===== MenuButton (EnumMultiSelect) ===== */
+
+.menu-button {
+    -fx-text-fill: -app-text;
+}
+
+.menu-button > .label {
+    -fx-text-fill: -app-text;
+}
+
+.menu-button > .arrow-button {
+    -fx-background-color: transparent;
+}
+
+.menu-button > .arrow-button > .arrow {
+    -fx-background-color: -app-muted-text;
+}
+
+/* ===== ContextMenu / CheckMenuItem (multi-select dropdowns) ===== */
+
+.context-menu {
+    -fx-background-color: -app-surface;
+    -fx-border-color: -app-border;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 2;
+}
+
+.context-menu .menu-item {
+    -fx-background-color: transparent;
+}
+
+.context-menu .menu-item .label {
+    -fx-text-fill: -app-text;
+}
+
+.context-menu .menu-item:hover,
+.context-menu .menu-item:focused {
+    -fx-background-color: -app-muted-surface;
+}
+
+.context-menu .menu-item:hover .label,
+.context-menu .menu-item:focused .label {
+    -fx-text-fill: -app-text;
+}
+
+.check-menu-item:checked > .left-container > .check {
+    -fx-background-color: -app-text;
+}
+
+/* ===== TextField & TextArea ===== */
+
+.text-field {
+    -fx-text-fill: -app-text;
+    -fx-prompt-text-fill: -app-muted-text;
+    -fx-highlight-fill: -app-primary;
+    -fx-highlight-text-fill: -app-on-primary;
+    -fx-control-inner-background: -app-muted-surface;
+}
+
+.text-area {
+    -fx-text-fill: -app-text;
+    -fx-prompt-text-fill: -app-muted-text;
+    -fx-highlight-fill: -app-primary;
+    -fx-highlight-text-fill: -app-on-primary;
+    -fx-control-inner-background: -app-muted-surface;
+}
+
+.text-area .content {
+    -fx-background-color: -app-muted-surface;
+}
+
+/* ===== Alert / Dialog ===== */
+
+.dialog-pane {
+    -fx-background-color: -app-surface;
+}
+
+.dialog-pane > .content {
+    -fx-text-fill: -app-text;
+}
+
+.dialog-pane > .header-panel {
+    -fx-background-color: -app-muted-surface;
+}
+
+.dialog-pane > .header-panel .label {
+    -fx-text-fill: -app-text;
+}
+
+.dialog-pane .content .label {
+    -fx-text-fill: -app-text;
+}
+
+.dialog-pane > .button-bar > .container > .button {
+    -fx-background-color: -app-muted-surface;
+    -fx-text-fill: -app-text;
+    -fx-border-color: -app-border;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+
+.dialog-pane > .button-bar > .container > .button:hover {
+    -fx-background-color: -app-primary;
+    -fx-text-fill: -app-on-primary;
+}
+
+/* ===== Tooltip ===== */
+
+.tooltip {
+    -fx-background-color: -app-surface;
+    -fx-text-fill: -app-text;
+    -fx-border-color: -app-border;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
 }
