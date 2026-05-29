@@ -97,6 +97,16 @@ public enum AppTheme {
     }
 
     public String createRootStyle() {
+        return createRootVariables() + "-fx-background-color: -app-background;";
+    }
+
+    /**
+     * The {@code -app-*} colour variable declarations on their own. These are published
+     * both as the inline style of the main root and through a {@code .root} stylesheet
+     * rule, so popups (context menus, tooltips) that live in their own scene can still
+     * resolve the variables instead of failing with CSS warnings.
+     */
+    public String createRootVariables() {
         return "-app-background: " + background + ";"
                 + "-app-surface: " + surface + ";"
                 + "-app-muted-surface: " + mutedSurface + ";"
@@ -112,8 +122,7 @@ public enum AppTheme {
                 + "-app-secondary-background: " + secondaryBackground + ";"
                 + "-app-secondary-text: " + secondaryText + ";"
                 + "-app-danger-background: " + dangerBackground + ";"
-                + "-app-danger-text: " + dangerText + ";"
-                + "-fx-background-color: -app-background;";
+                + "-app-danger-text: " + dangerText + ";";
     }
 
     @Override

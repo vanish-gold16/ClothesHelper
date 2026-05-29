@@ -417,10 +417,14 @@ public class HomePage extends ScrollPane {
 
     private String createItemDetails(SavedClothingItem item) {
         String type = cleanText(item.clothingType());
+        String color = cleanText(item.mainColor());
         String brand = cleanText(item.brand());
         String season = cleanText(item.season());
 
         String details = firstText(type, "Clothing item");
+        if (color != null) {
+            details += " | " + color;
+        }
         if (brand != null) {
             details += " | " + brand;
         }

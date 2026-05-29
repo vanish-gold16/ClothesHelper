@@ -20,8 +20,11 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
+import javafx.scene.Scene;
 import javafx.stage.Stage;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -36,6 +39,7 @@ public class AppRoot extends BorderPane {
     private AppTheme currentTheme;
     private String activePageName = "Home";
     private LibraryPage libraryPage;
+    private String themeStylesheetUri;
 
     public AppRoot(Stage owner) {
         currentTheme = themePreferences.load();
@@ -44,6 +48,9 @@ public class AppRoot extends BorderPane {
         setBottom(navigation);
         createPages(owner);
         applyTheme(currentTheme);
+        // The scene does not exist yet during construction, so publish the theme
+        // variables to it (so popups can resolve them) once it is attached.
+        sceneProperty().addListener((observable, oldScene, newScene) -> publishThemeVariables(newScene));
         selectPage("Home");
     }
 
@@ -150,10 +157,30 @@ public class AppRoot extends BorderPane {
 
     private void applyTheme(AppTheme theme) {
         setStyle(theme.createRootStyle());
+        publishThemeVariables(getScene());
         if (navigation != null) {
             navigation.setStyle(createNavigationStyle());
         }
         updateNavigation(activePageName);
+    }
+
+    // Inline styles set on this root are not visible to popups (context menus, tooltips)
+    // that live in their own scene. Publishing the same variables through a .root
+    // stylesheet rule lets those popups resolve the -app-* colours and avoids CSS
+    // warnings, while still following theme switches.
+    private void publishThemeVariables(Scene scene) {
+        if (scene == null) {
+            return;
+        }
+
+        if (themeStylesheetUri != null) {
+            scene.getStylesheets().remove(themeStylesheetUri);
+        }
+
+        String css = ".root {" + currentTheme.createRootVariables() + "}";
+        themeStylesheetUri = "data:text/css;base64,"
+                + Base64.getEncoder().encodeToString(css.getBytes(StandardCharsets.UTF_8));
+        scene.getStylesheets().add(themeStylesheetUri);
     }
 
     private String createNavigationStyle() {

@@ -15,13 +15,12 @@ import java.util.Set;
 
 public final class OutfitRecommendationService {
     private static final int MINIMUM_ACCEPTABLE_SCORE = 35;
-    // When several items score close to the best, treat them as interchangeable so
-    // repeated "Generate" presses can rotate between them instead of always
-    // returning the single highest scorer.
-    private static final int VARIETY_MARGIN = 20;
-    // Always allow rotating through at least this many top-scoring items per slot, even
-    // if they sit outside VARIETY_MARGIN, so regeneration can always offer an alternative.
-    private static final int MIN_ROTATION_CANDIDATES = 3;
+    // Only items scoring within this margin of the best are treated as interchangeable
+    // and rotated through on repeated "Generate" presses. If everything else is further
+    // behind than this, the single best item is returned every time (no forced change).
+    // The margin is wide enough to keep adjacent-style items in the mix, while the
+    // style-clash penalty (see styleScore) pushes clashing items past it.
+    private static final int VARIETY_MARGIN = 40;
 
     public Recommendation generate(List<SavedClothingItem> items, WeatherSnapshot weather) {
         return generate(items, weather, 0, OutfitPattern.RANDOM, OutfitStyle.ANY);
@@ -168,23 +167,24 @@ public final class OutfitRecommendationService {
             return Optional.empty();
         }
 
-        // Build the pool we rotate through when "Regenerate" is pressed. Variant 0 is
-        // always the highest scorer. We keep every item within a small margin of the
-        // best, but also always keep at least the top few even if they fall outside the
-        // margin, so any slot that has more than one usable item will swap on the next
-        // press. That guarantees a regeneration changes at least one piece whenever the
-        // wardrobe has the spare items to do so.
+        // Keep only the items that score within the margin of the best one. If nothing
+        // else comes close, this leaves a single item that is returned on every press,
+        // so a clearly best-fitting piece is not swapped out for a worse one.
         candidates.sort(Comparator.comparingInt(ScoredItem::score).reversed());
         int bestScore = candidates.get(0).score();
-        List<ScoredItem> topCandidates = new ArrayList<>();
-        for (int index = 0; index < candidates.size(); index++) {
-            ScoredItem candidate = candidates.get(index);
-            if (index < MIN_ROTATION_CANDIDATES || candidate.score() >= bestScore - VARIETY_MARGIN) {
-                topCandidates.add(candidate);
+        List<ScoredItem> pool = new ArrayList<>();
+        for (ScoredItem candidate : candidates) {
+            if (candidate.score() >= bestScore - VARIETY_MARGIN) {
+                pool.add(candidate);
             }
         }
 
-        return Optional.of(topCandidates.get(variant % topCandidates.size()));
+        // Cycle straight through the suitable pool so every press advances to the next
+        // item (variant 0 is always the best). The pool only holds items within the
+        // margin, so each one is a sensible choice; if there is just one, it is returned
+        // every time and nothing changes - which is the desired behaviour when no other
+        // item is close enough.
+        return Optional.of(pool.get(variant % pool.size()));
     }
 
     private int score(
@@ -867,11 +867,14 @@ public final class OutfitRecommendationService {
             return 0;
         }
 
+        // Distance 0/1 stay within VARIETY_MARGIN of each other so the chosen style and
+        // its neighbour can be mixed and rotated. Distance 2/3 are pushed well past the
+        // margin so a clashing piece only appears when nothing on-style is available.
         return switch (Math.abs(styleRank - vibeRank)) {
             case 0 -> 70;
-            case 1 -> 32;
-            case 2 -> -14;
-            default -> -60;
+            case 1 -> 35;
+            case 2 -> -40;
+            default -> -85;
         };
     }
 
