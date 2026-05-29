@@ -11,17 +11,18 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.Random;
 import java.util.Set;
 
 public final class OutfitRecommendationService {
     private static final int MINIMUM_ACCEPTABLE_SCORE = 35;
-    // Only items scoring within this margin of the best are treated as interchangeable
-    // and rotated through on repeated "Generate" presses. If everything else is further
-    // behind than this, the single best item is returned every time (no forced change).
-    // The margin is wide enough to rotate between different but still sensible types
-    // (e.g. sneakers and loafers on a warm day) and to keep adjacent-style items in the
-    // mix, while the style-clash penalty (see styleScore) pushes clashing items past it.
-    private static final int VARIETY_MARGIN = 60;
+    // On regeneration, an item still has a chance of being chosen as long as it scores
+    // within this many points of the best item for the slot; further behind than this
+    // (clearly worse for the weather, or a clashing style) it never comes up. Wide enough
+    // to rotate between different sensible types (sneakers vs loafers on a warm day) and
+    // to keep adjacent-style items in the mix; the style-clash penalty (see styleScore)
+    // keeps clashing items beyond it.
+    private static final int ROTATION_WINDOW = 80;
 
     public Recommendation generate(List<SavedClothingItem> items, WeatherSnapshot weather) {
         return generate(items, weather, 0, OutfitPattern.RANDOM, OutfitStyle.ANY);
@@ -168,24 +169,49 @@ public final class OutfitRecommendationService {
             return Optional.empty();
         }
 
-        // Keep only the items that score within the margin of the best one. If nothing
-        // else comes close, this leaves a single item that is returned on every press,
-        // so a clearly best-fitting piece is not swapped out for a worse one.
         candidates.sort(Comparator.comparingInt(ScoredItem::score).reversed());
-        int bestScore = candidates.get(0).score();
-        List<ScoredItem> pool = new ArrayList<>();
-        for (ScoredItem candidate : candidates) {
-            if (candidate.score() >= bestScore - VARIETY_MARGIN) {
-                pool.add(candidate);
-            }
+
+        // Variant 0 (the first view, and after any weather/style/pattern change) always
+        // shows the single best item for the slot.
+        if (variant <= 0) {
+            return Optional.of(candidates.get(0));
         }
 
-        // Cycle straight through the suitable pool so every press advances to the next
-        // item (variant 0 is always the best). The pool only holds items within the
-        // margin, so each one is a sensible choice; if there is just one, it is returned
-        // every time and nothing changes - which is the desired behaviour when no other
-        // item is close enough.
-        return Optional.of(pool.get(variant % pool.size()));
+        // For each "Generate" press after the first, draw an item at random, weighted by
+        // score: the best is the most likely, close and adjacent-style items are still
+        // plausible, and anything more than ROTATION_WINDOW behind the best (clearly
+        // worse for the weather, or a clashing style) gets no weight at all. This way
+        // every slot that genuinely has an alternative can change - not just the shoes -
+        // while suitable pieces still come up most often. Slots with only one usable item
+        // keep returning it.
+        return Optional.of(weightedChoice(candidates, slot, variant));
+    }
+
+    private ScoredItem weightedChoice(List<ScoredItem> candidates, Slot slot, int variant) {
+        int bestScore = candidates.get(0).score();
+        long[] cumulativeWeights = new long[candidates.size()];
+        long totalWeight = 0;
+        for (int index = 0; index < candidates.size(); index++) {
+            int weight = candidates.get(index).score() - (bestScore - ROTATION_WINDOW);
+            if (index == 0) {
+                weight = Math.max(weight, 1);
+            } else if (weight < 0) {
+                weight = 0;
+            }
+            totalWeight += weight;
+            cumulativeWeights[index] = totalWeight;
+        }
+
+        // Seed by variant and slot so each press is a fresh draw, different slots vary
+        // independently, and the same variant always reproduces the same outfit.
+        Random random = new Random(variant * 1_000_003L + slot.label().hashCode());
+        long target = (long) (random.nextDouble() * totalWeight);
+        for (int index = 0; index < candidates.size(); index++) {
+            if (target < cumulativeWeights[index]) {
+                return candidates.get(index);
+            }
+        }
+        return candidates.get(0);
     }
 
     private int score(
