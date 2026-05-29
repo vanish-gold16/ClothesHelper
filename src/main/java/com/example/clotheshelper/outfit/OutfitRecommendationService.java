@@ -840,51 +840,60 @@ public final class OutfitRecommendationService {
     }
 
     // Steers the whole outfit toward a chosen style by rewarding matching vibes.
-    // Styles sit on a spectrum (formal - shine - streetwear - sporty), so a neighbour
-    // still earns a solid bonus and can be mixed in, while the opposite end is pushed
-    // down. Casual and cozy pieces are treated as neutral fillers that go with anything.
+    // Styles sit on a spectrum (formal - shine - streetwear - sporty); a piece is scored
+    // by how far its vibe sits from the chosen style on that spectrum. The swing is wide
+    // on purpose so a clear clash (e.g. sporty sneakers under "Formal") loses to an
+    // on-style item even when the off-style one is a slightly better weather/type fit.
+    // Casual and cozy pieces are neutral fillers that work across looks.
     private int styleScore(String vibe, OutfitStyle style) {
         if (style == null || style == OutfitStyle.ANY || vibe == null) {
             return 0;
         }
 
+        if ("casual".equals(vibe)) {
+            // Plain casual pieces blend into anything except the dressiest looks.
+            return style == OutfitStyle.FORMAL ? -4 : 12;
+        }
+        if ("cozy".equals(vibe)) {
+            return switch (style) {
+                case STREETWEAR, SPORTY -> 8;
+                default -> -10;
+            };
+        }
+
+        Integer styleRank = stylePosition(style);
+        Integer vibeRank = vibePosition(vibe);
+        if (styleRank == null || vibeRank == null) {
+            return 0;
+        }
+
+        return switch (Math.abs(styleRank - vibeRank)) {
+            case 0 -> 70;
+            case 1 -> 32;
+            case 2 -> -14;
+            default -> -60;
+        };
+    }
+
+    // Position of each style on the formal - shine - streetwear - sporty spectrum.
+    private Integer stylePosition(OutfitStyle style) {
         return switch (style) {
-            case FORMAL -> switch (vibe) {
-                case "elegant" -> 40;
-                case "shine" -> 20;
-                case "casual", "cozy" -> -6;
-                case "streetwear" -> -25;
-                case "sporty" -> -30;
-                default -> 0;
-            };
-            case SHINE -> switch (vibe) {
-                case "shine" -> 40;
-                case "elegant" -> 20;
-                case "streetwear" -> 10;
-                case "casual" -> 0;
-                case "sporty" -> -20;
-                case "cozy" -> -15;
-                default -> 0;
-            };
-            case STREETWEAR -> switch (vibe) {
-                case "streetwear" -> 40;
-                case "sporty" -> 20;
-                case "casual" -> 14;
-                case "cozy" -> 8;
-                case "shine" -> 10;
-                case "elegant" -> -25;
-                default -> 0;
-            };
-            case SPORTY -> switch (vibe) {
-                case "sporty" -> 40;
-                case "streetwear" -> 20;
-                case "casual" -> 14;
-                case "cozy" -> 8;
-                case "shine" -> -20;
-                case "elegant" -> -30;
-                default -> 0;
-            };
-            default -> 0;
+            case FORMAL -> 0;
+            case SHINE -> 1;
+            case STREETWEAR -> 2;
+            case SPORTY -> 3;
+            default -> null;
+        };
+    }
+
+    // Position of a clothing vibe on the same spectrum, so it can be compared to a style.
+    private Integer vibePosition(String vibe) {
+        return switch (vibe) {
+            case "elegant" -> 0;
+            case "shine" -> 1;
+            case "streetwear" -> 2;
+            case "sporty" -> 3;
+            default -> null;
         };
     }
 
