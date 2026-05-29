@@ -1,6 +1,7 @@
 package com.example.clotheshelper.ui.pages;
 
 import com.example.clotheshelper.enums.OutfitPattern;
+import com.example.clotheshelper.enums.OutfitStyle;
 import com.example.clotheshelper.outfit.OutfitRecommendationService;
 import com.example.clotheshelper.outfit.OutfitRecommendationService.MissingSlot;
 import com.example.clotheshelper.outfit.OutfitRecommendationService.Pick;
@@ -60,6 +61,7 @@ public class HomePage extends ScrollPane {
     private final OutfitRecommendationService outfitService = new OutfitRecommendationService();
     private final Button refreshButton = new Button("Refresh");
     private final ComboBox<OutfitPattern> patternField = new ComboBox<>(FXCollections.observableArrayList(OutfitPattern.values()));
+    private final ComboBox<OutfitStyle> styleField = new ComboBox<>(FXCollections.observableArrayList(OutfitStyle.values()));
     private final Button generateOutfitButton = new Button("Generate outfit");
     private final Label temperatureLabel = new Label("Loading...");
     private final Label observedAtLabel = new Label("Current weather in Prague");
@@ -161,10 +163,21 @@ public class HomePage extends ScrollPane {
         HBox patternBox = new HBox(8, patternLabel, patternField);
         patternBox.setAlignment(Pos.CENTER_LEFT);
 
+        Label styleLabel = new Label("Style");
+        styleLabel.setStyle(UiStyles.FIELD_LABEL);
+        styleField.setStyle(UiStyles.COMBO_BOX);
+        styleField.setValue(OutfitStyle.ANY);
+        styleField.setOnAction(event -> outfitVariant = 0);
+        HBox styleBox = new HBox(8, styleLabel, styleField);
+        styleBox.setAlignment(Pos.CENTER_LEFT);
+
         Region headerSpacer = new Region();
         HBox.setHgrow(headerSpacer, Priority.ALWAYS);
 
-        HBox titleRow = new HBox(16, outfitTitleLabel, headerSpacer, patternBox, generateOutfitButton);
+        HBox controlsRow = new HBox(16, styleBox, patternBox, generateOutfitButton);
+        controlsRow.setAlignment(Pos.CENTER_LEFT);
+
+        HBox titleRow = new HBox(16, outfitTitleLabel, headerSpacer, controlsRow);
         titleRow.setAlignment(Pos.CENTER_LEFT);
 
         outfitGuidanceLabel.setStyle(UiStyles.SUBTITLE);
@@ -226,7 +239,7 @@ public class HomePage extends ScrollPane {
         if (lastWeather == null) {
             return;
         }
-        renderOutfit(lastWeather, outfitVariant, currentPattern());
+        renderOutfit(lastWeather, outfitVariant, currentPattern(), currentStyle());
         outfitVariant++;
     }
 
@@ -260,7 +273,12 @@ public class HomePage extends ScrollPane {
         return pattern == null ? OutfitPattern.RANDOM : pattern;
     }
 
-    private void renderOutfit(WeatherSnapshot weather, int variant, OutfitPattern pattern) {
+    private OutfitStyle currentStyle() {
+        OutfitStyle style = styleField.getValue();
+        return style == null ? OutfitStyle.ANY : style;
+    }
+
+    private void renderOutfit(WeatherSnapshot weather, int variant, OutfitPattern pattern, OutfitStyle style) {
         try {
             List<SavedClothingItem> items = memoryStore.loadAll();
             if (items.isEmpty()) {
@@ -268,7 +286,7 @@ public class HomePage extends ScrollPane {
                 return;
             }
 
-            Recommendation recommendation = outfitService.generate(items, weather, variant, pattern);
+            Recommendation recommendation = outfitService.generate(items, weather, variant, pattern, style);
             outfitTitleLabel.setText(recommendation.title());
             outfitGuidanceLabel.setText(recommendation.guidance());
             outfitItemsPane.getChildren().clear();

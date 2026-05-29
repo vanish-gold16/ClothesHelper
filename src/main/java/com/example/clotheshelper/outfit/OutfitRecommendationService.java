@@ -1,6 +1,7 @@
 package com.example.clotheshelper.outfit;
 
 import com.example.clotheshelper.enums.OutfitPattern;
+import com.example.clotheshelper.enums.OutfitStyle;
 import com.example.clotheshelper.storage.SavedClothingItem;
 import com.example.clotheshelper.weather.WeatherSnapshot;
 
@@ -23,11 +24,11 @@ public final class OutfitRecommendationService {
     private static final int MIN_ROTATION_CANDIDATES = 3;
 
     public Recommendation generate(List<SavedClothingItem> items, WeatherSnapshot weather) {
-        return generate(items, weather, 0, OutfitPattern.RANDOM);
+        return generate(items, weather, 0, OutfitPattern.RANDOM, OutfitStyle.ANY);
     }
 
     public Recommendation generate(List<SavedClothingItem> items, WeatherSnapshot weather, int variant) {
-        return generate(items, weather, variant, OutfitPattern.RANDOM);
+        return generate(items, weather, variant, OutfitPattern.RANDOM, OutfitStyle.ANY);
     }
 
     public Recommendation generate(
@@ -36,7 +37,18 @@ public final class OutfitRecommendationService {
             int variant,
             OutfitPattern pattern
     ) {
+        return generate(items, weather, variant, pattern, OutfitStyle.ANY);
+    }
+
+    public Recommendation generate(
+            List<SavedClothingItem> items,
+            WeatherSnapshot weather,
+            int variant,
+            OutfitPattern pattern,
+            OutfitStyle style
+    ) {
         OutfitPattern safePattern = pattern == null ? OutfitPattern.RANDOM : pattern;
+        OutfitStyle safeStyle = style == null ? OutfitStyle.ANY : style;
         int feelsLike = (int) Math.floor(weather.apparentTemperatureCelsius());
         Conditions conditions = new Conditions(weather.isRaining(), weather.isWindy());
         Plan plan = createPlan(feelsLike, conditions);
@@ -55,8 +67,8 @@ public final class OutfitRecommendationService {
                 continue;
             }
 
-            Optional<ScoredItem> candidate =
-                    findBestCandidate(items, slot, feelsLike, conditions, usedItemIds, safeVariant, safePattern, topColorHex);
+            Optional<ScoredItem> candidate = findBestCandidate(
+                    items, slot, feelsLike, conditions, usedItemIds, safeVariant, safePattern, safeStyle, topColorHex);
             if (candidate.isEmpty()) {
                 MissingSlot missingSlot = new MissingSlot(slot.label(), slot.advice());
                 if (slot.required()) {
@@ -78,7 +90,7 @@ public final class OutfitRecommendationService {
 
         return new Recommendation(
                 plan.title(),
-                guidanceFor(plan, conditions, safePattern),
+                guidanceFor(plan, conditions, safePattern, safeStyle),
                 feelsLike,
                 picks,
                 missingRequired,
@@ -86,12 +98,26 @@ public final class OutfitRecommendationService {
         );
     }
 
-    private String guidanceFor(Plan plan, Conditions conditions, OutfitPattern pattern) {
+    private String guidanceFor(Plan plan, Conditions conditions, OutfitPattern pattern, OutfitStyle style) {
         String guidance = guidanceFor(plan, conditions);
         if (pattern == OutfitPattern.SANDWICH) {
-            return guidance + " Sandwich look: the shoes echo the colour of the top.";
+            guidance += " Sandwich look: the shoes echo the colour of the top.";
+        }
+        if (style != null && style != OutfitStyle.ANY) {
+            guidance += " Styled for a " + style.toString().toLowerCase(Locale.ROOT) + " look"
+                    + adjacentStyleHint(style) + ".";
         }
         return guidance;
+    }
+
+    private String adjacentStyleHint(OutfitStyle style) {
+        return switch (style) {
+            case FORMAL -> ", with room for shiny pieces";
+            case SHINE -> ", with room for formal pieces";
+            case STREETWEAR -> ", mixing in sporty pieces";
+            case SPORTY -> ", mixing in streetwear pieces";
+            default -> "";
+        };
     }
 
     private String guidanceFor(Plan plan, Conditions conditions) {
@@ -115,6 +141,7 @@ public final class OutfitRecommendationService {
             Set<String> usedItemIds,
             int variant,
             OutfitPattern pattern,
+            OutfitStyle style,
             String topColorHex
     ) {
         List<ScoredItem> candidates = new ArrayList<>();
@@ -123,7 +150,7 @@ public final class OutfitRecommendationService {
                 continue;
             }
 
-            int score = score(item, slot, feelsLike, conditions, pattern, topColorHex);
+            int score = score(item, slot, feelsLike, conditions, pattern, style, topColorHex);
             if (score == Integer.MIN_VALUE) {
                 continue;
             }
@@ -166,6 +193,7 @@ public final class OutfitRecommendationService {
             int feelsLike,
             Conditions conditions,
             OutfitPattern pattern,
+            OutfitStyle style,
             String topColorHex
     ) {
         String type = normalize(item.clothingType());
@@ -185,6 +213,7 @@ public final class OutfitRecommendationService {
         score += vibeScore(normalize(item.vibe()), feelsLike);
         score += conditionScore(type, seasons, conditions);
         score += patternScore(item, slot, pattern, topColorHex);
+        score += styleScore(normalize(item.vibe()), style);
 
         if (item.hasPhoto()) {
             score += 2;
@@ -806,6 +835,55 @@ public final class OutfitRecommendationService {
 
         return switch (vibe) {
             case "casual", "streetwear" -> 3;
+            default -> 0;
+        };
+    }
+
+    // Steers the whole outfit toward a chosen style by rewarding matching vibes.
+    // Styles sit on a spectrum (formal - shine - streetwear - sporty), so a neighbour
+    // still earns a solid bonus and can be mixed in, while the opposite end is pushed
+    // down. Casual and cozy pieces are treated as neutral fillers that go with anything.
+    private int styleScore(String vibe, OutfitStyle style) {
+        if (style == null || style == OutfitStyle.ANY || vibe == null) {
+            return 0;
+        }
+
+        return switch (style) {
+            case FORMAL -> switch (vibe) {
+                case "elegant" -> 40;
+                case "shine" -> 20;
+                case "casual", "cozy" -> -6;
+                case "streetwear" -> -25;
+                case "sporty" -> -30;
+                default -> 0;
+            };
+            case SHINE -> switch (vibe) {
+                case "shine" -> 40;
+                case "elegant" -> 20;
+                case "streetwear" -> 10;
+                case "casual" -> 0;
+                case "sporty" -> -20;
+                case "cozy" -> -15;
+                default -> 0;
+            };
+            case STREETWEAR -> switch (vibe) {
+                case "streetwear" -> 40;
+                case "sporty" -> 20;
+                case "casual" -> 14;
+                case "cozy" -> 8;
+                case "shine" -> 10;
+                case "elegant" -> -25;
+                default -> 0;
+            };
+            case SPORTY -> switch (vibe) {
+                case "sporty" -> 40;
+                case "streetwear" -> 20;
+                case "casual" -> 14;
+                case "cozy" -> 8;
+                case "shine" -> -20;
+                case "elegant" -> -30;
+                default -> 0;
+            };
             default -> 0;
         };
     }
