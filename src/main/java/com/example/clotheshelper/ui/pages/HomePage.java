@@ -1,5 +1,6 @@
 package com.example.clotheshelper.ui.pages;
 
+import com.example.clotheshelper.enums.OutfitPattern;
 import com.example.clotheshelper.outfit.OutfitRecommendationService;
 import com.example.clotheshelper.outfit.OutfitRecommendationService.MissingSlot;
 import com.example.clotheshelper.outfit.OutfitRecommendationService.Pick;
@@ -11,10 +12,12 @@ import com.example.clotheshelper.ui.styles.UiStyles;
 import com.example.clotheshelper.weather.PragueWeatherClient;
 import com.example.clotheshelper.weather.WeatherSnapshot;
 import javafx.application.Platform;
+import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.FlowPane;
@@ -56,6 +59,7 @@ public class HomePage extends ScrollPane {
     private final PragueWeatherClient weatherClient = new PragueWeatherClient();
     private final OutfitRecommendationService outfitService = new OutfitRecommendationService();
     private final Button refreshButton = new Button("Refresh");
+    private final ComboBox<OutfitPattern> patternField = new ComboBox<>(FXCollections.observableArrayList(OutfitPattern.values()));
     private final Button generateOutfitButton = new Button("Generate outfit");
     private final Label temperatureLabel = new Label("Loading...");
     private final Label observedAtLabel = new Label("Current weather in Prague");
@@ -149,10 +153,18 @@ public class HomePage extends ScrollPane {
         generateOutfitButton.setDisable(true);
         generateOutfitButton.setOnAction(event -> generateOutfit());
 
+        Label patternLabel = new Label("Pattern");
+        patternLabel.setStyle(UiStyles.FIELD_LABEL);
+        patternField.setStyle(UiStyles.COMBO_BOX);
+        patternField.setValue(OutfitPattern.RANDOM);
+        patternField.setOnAction(event -> outfitVariant = 0);
+        HBox patternBox = new HBox(8, patternLabel, patternField);
+        patternBox.setAlignment(Pos.CENTER_LEFT);
+
         Region headerSpacer = new Region();
         HBox.setHgrow(headerSpacer, Priority.ALWAYS);
 
-        HBox titleRow = new HBox(16, outfitTitleLabel, headerSpacer, generateOutfitButton);
+        HBox titleRow = new HBox(16, outfitTitleLabel, headerSpacer, patternBox, generateOutfitButton);
         titleRow.setAlignment(Pos.CENTER_LEFT);
 
         outfitGuidanceLabel.setStyle(UiStyles.SUBTITLE);
@@ -214,7 +226,7 @@ public class HomePage extends ScrollPane {
         if (lastWeather == null) {
             return;
         }
-        renderOutfit(lastWeather, outfitVariant);
+        renderOutfit(lastWeather, outfitVariant, currentPattern());
         outfitVariant++;
     }
 
@@ -243,7 +255,12 @@ public class HomePage extends ScrollPane {
         return "Could not load weather data: " + message;
     }
 
-    private void renderOutfit(WeatherSnapshot weather, int variant) {
+    private OutfitPattern currentPattern() {
+        OutfitPattern pattern = patternField.getValue();
+        return pattern == null ? OutfitPattern.RANDOM : pattern;
+    }
+
+    private void renderOutfit(WeatherSnapshot weather, int variant, OutfitPattern pattern) {
         try {
             List<SavedClothingItem> items = memoryStore.loadAll();
             if (items.isEmpty()) {
@@ -251,7 +268,7 @@ public class HomePage extends ScrollPane {
                 return;
             }
 
-            Recommendation recommendation = outfitService.generate(items, weather, variant);
+            Recommendation recommendation = outfitService.generate(items, weather, variant, pattern);
             outfitTitleLabel.setText(recommendation.title());
             outfitGuidanceLabel.setText(recommendation.guidance());
             outfitItemsPane.getChildren().clear();

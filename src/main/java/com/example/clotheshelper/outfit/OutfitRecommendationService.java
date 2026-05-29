@@ -1,5 +1,6 @@
 package com.example.clotheshelper.outfit;
 
+import com.example.clotheshelper.enums.OutfitPattern;
 import com.example.clotheshelper.storage.SavedClothingItem;
 import com.example.clotheshelper.weather.WeatherSnapshot;
 
@@ -22,10 +23,20 @@ public final class OutfitRecommendationService {
     private static final int MIN_ROTATION_CANDIDATES = 3;
 
     public Recommendation generate(List<SavedClothingItem> items, WeatherSnapshot weather) {
-        return generate(items, weather, 0);
+        return generate(items, weather, 0, OutfitPattern.RANDOM);
     }
 
     public Recommendation generate(List<SavedClothingItem> items, WeatherSnapshot weather, int variant) {
+        return generate(items, weather, variant, OutfitPattern.RANDOM);
+    }
+
+    public Recommendation generate(
+            List<SavedClothingItem> items,
+            WeatherSnapshot weather,
+            int variant,
+            OutfitPattern pattern
+    ) {
+        OutfitPattern safePattern = pattern == null ? OutfitPattern.RANDOM : pattern;
         int feelsLike = (int) Math.floor(weather.apparentTemperatureCelsius());
         Conditions conditions = new Conditions(weather.isRaining(), weather.isWindy());
         Plan plan = createPlan(feelsLike, conditions);
@@ -35,13 +46,17 @@ public final class OutfitRecommendationService {
         Set<String> usedItemIds = new HashSet<>();
         boolean onePieceSelected = false;
         int safeVariant = Math.max(0, variant);
+        // For the sandwich pattern we remember the colour of the top once it is chosen,
+        // then steer the shoes toward it. The top is always scored before the shoes.
+        String topColorHex = null;
 
         for (Slot slot : plan.slots()) {
             if (slot.role() == Role.BOTTOM && onePieceSelected) {
                 continue;
             }
 
-            Optional<ScoredItem> candidate = findBestCandidate(items, slot, feelsLike, conditions, usedItemIds, safeVariant);
+            Optional<ScoredItem> candidate =
+                    findBestCandidate(items, slot, feelsLike, conditions, usedItemIds, safeVariant, safePattern, topColorHex);
             if (candidate.isEmpty()) {
                 MissingSlot missingSlot = new MissingSlot(slot.label(), slot.advice());
                 if (slot.required()) {
@@ -55,17 +70,28 @@ public final class OutfitRecommendationService {
             SavedClothingItem item = candidate.get().item();
             picks.add(new Pick(slot.label(), item));
             usedItemIds.add(item.id());
+            if (slot.role() == Role.BASE_TOP && topColorHex == null) {
+                topColorHex = cleanText(item.mainColorHex());
+            }
             onePieceSelected = onePieceSelected || (feelsLike >= 12 && slot.role() == Role.BASE_TOP && isOnePiece(item));
         }
 
         return new Recommendation(
                 plan.title(),
-                guidanceFor(plan, conditions),
+                guidanceFor(plan, conditions, safePattern),
                 feelsLike,
                 picks,
                 missingRequired,
                 missingOptional
         );
+    }
+
+    private String guidanceFor(Plan plan, Conditions conditions, OutfitPattern pattern) {
+        String guidance = guidanceFor(plan, conditions);
+        if (pattern == OutfitPattern.SANDWICH) {
+            return guidance + " Sandwich look: the shoes echo the colour of the top.";
+        }
+        return guidance;
     }
 
     private String guidanceFor(Plan plan, Conditions conditions) {
@@ -87,7 +113,9 @@ public final class OutfitRecommendationService {
             int feelsLike,
             Conditions conditions,
             Set<String> usedItemIds,
-            int variant
+            int variant,
+            OutfitPattern pattern,
+            String topColorHex
     ) {
         List<ScoredItem> candidates = new ArrayList<>();
         for (SavedClothingItem item : items) {
@@ -95,7 +123,7 @@ public final class OutfitRecommendationService {
                 continue;
             }
 
-            int score = score(item, slot, feelsLike, conditions);
+            int score = score(item, slot, feelsLike, conditions, pattern, topColorHex);
             if (score == Integer.MIN_VALUE) {
                 continue;
             }
@@ -132,7 +160,14 @@ public final class OutfitRecommendationService {
         return Optional.of(topCandidates.get(variant % topCandidates.size()));
     }
 
-    private int score(SavedClothingItem item, Slot slot, int feelsLike, Conditions conditions) {
+    private int score(
+            SavedClothingItem item,
+            Slot slot,
+            int feelsLike,
+            Conditions conditions,
+            OutfitPattern pattern,
+            String topColorHex
+    ) {
         String type = normalize(item.clothingType());
         int score;
         if (slot.preferredTypes().contains(type)) {
@@ -149,6 +184,7 @@ public final class OutfitRecommendationService {
         score += bestOccasionScore(normalizeAll(item.wearOccasions()));
         score += vibeScore(normalize(item.vibe()), feelsLike);
         score += conditionScore(type, seasons, conditions);
+        score += patternScore(item, slot, pattern, topColorHex);
 
         if (item.hasPhoto()) {
             score += 2;
@@ -158,6 +194,61 @@ public final class OutfitRecommendationService {
         }
 
         return score;
+    }
+
+    // Sandwich styling: reward shoes whose colour is close to the top's colour. The
+    // bonus fades smoothly with colour distance so an exact match wins, similar shades
+    // still get a nudge, and clashing colours get nothing.
+    private int patternScore(SavedClothingItem item, Slot slot, OutfitPattern pattern, String topColorHex) {
+        if (pattern != OutfitPattern.SANDWICH || slot.role() != Role.SHOES || topColorHex == null) {
+            return 0;
+        }
+
+        double distance = colorDistance(topColorHex, item.mainColorHex());
+        if (distance < 0) {
+            return 0;
+        }
+
+        double maxDistance = Math.sqrt(3 * 255.0 * 255.0);
+        double closeness = 1.0 - Math.min(distance, maxDistance) / maxDistance;
+        return (int) Math.round(closeness * 70);
+    }
+
+    private double colorDistance(String hexA, String hexB) {
+        int[] rgbA = parseHexColor(hexA);
+        int[] rgbB = parseHexColor(hexB);
+        if (rgbA == null || rgbB == null) {
+            return -1;
+        }
+
+        int deltaR = rgbA[0] - rgbB[0];
+        int deltaG = rgbA[1] - rgbB[1];
+        int deltaB = rgbA[2] - rgbB[2];
+        return Math.sqrt((double) deltaR * deltaR + (double) deltaG * deltaG + (double) deltaB * deltaB);
+    }
+
+    private int[] parseHexColor(String hex) {
+        if (hex == null) {
+            return null;
+        }
+
+        String value = hex.trim();
+        if (value.startsWith("#")) {
+            value = value.substring(1);
+        }
+        if (value.length() != 6) {
+            return null;
+        }
+
+        try {
+            return new int[]{
+                    Integer.parseInt(value.substring(0, 2), 16),
+                    Integer.parseInt(value.substring(2, 4), 16),
+                    Integer.parseInt(value.substring(4, 6), 16)
+            };
+        } catch (NumberFormatException exception) {
+            return null;
+        }
     }
 
     private int conditionScore(String type, List<String> seasons, Conditions conditions) {
