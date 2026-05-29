@@ -7,28 +7,34 @@ import com.example.clotheshelper.enums.Vibe;
 import com.example.clotheshelper.enums.WearOccasion;
 
 import java.nio.file.Path;
+import java.util.List;
 
 public record ClothingItemDraft(
         String name,
         ClothingType clothingType,
         String brand,
         String size,
-        Seasons season,
+        List<Seasons> seasons,
         MainColor mainColor,
-        WearOccasion wearOccasion,
+        List<WearOccasion> wearOccasions,
         Vibe vibe,
         String notes,
         Path sourcePhotoPath,
         boolean removePhoto
 ) {
+    public ClothingItemDraft {
+        seasons = seasons == null ? List.of() : List.copyOf(seasons);
+        wearOccasions = wearOccasions == null ? List.of() : List.copyOf(wearOccasions);
+    }
+
     public ClothingItemDraft(
             String name,
             ClothingType clothingType,
             String brand,
             String size,
-            Seasons season,
+            List<Seasons> seasons,
             MainColor mainColor,
-            WearOccasion wearOccasion,
+            List<WearOccasion> wearOccasions,
             Vibe vibe,
             String notes,
             Path sourcePhotoPath
@@ -38,9 +44,9 @@ public record ClothingItemDraft(
                 clothingType,
                 brand,
                 size,
-                season,
+                seasons,
                 mainColor,
-                wearOccasion,
+                wearOccasions,
                 vibe,
                 notes,
                 sourcePhotoPath,

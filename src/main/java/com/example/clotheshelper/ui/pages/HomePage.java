@@ -68,6 +68,7 @@ public class HomePage extends ScrollPane {
 
     private boolean loading;
     private WeatherSnapshot lastWeather;
+    private int outfitVariant;
 
     public HomePage() {
         Label subtitleLabel = new Label("Current Prague weather for easier outfit choices.");
@@ -192,6 +193,7 @@ public class HomePage extends ScrollPane {
         refreshButton.setDisable(true);
         generateOutfitButton.setDisable(true);
         lastWeather = null;
+        outfitVariant = 0;
         temperatureLabel.setText("Loading...");
         observedAtLabel.setText("Current weather in Prague");
         apparentTemperatureLabel.setText("--");
@@ -212,7 +214,8 @@ public class HomePage extends ScrollPane {
         if (lastWeather == null) {
             return;
         }
-        renderOutfit(lastWeather);
+        renderOutfit(lastWeather, outfitVariant);
+        outfitVariant++;
     }
 
     private void showErrorState(Throwable throwable) {
@@ -240,7 +243,7 @@ public class HomePage extends ScrollPane {
         return "Could not load weather data: " + message;
     }
 
-    private void renderOutfit(WeatherSnapshot weather) {
+    private void renderOutfit(WeatherSnapshot weather, int variant) {
         try {
             List<SavedClothingItem> items = memoryStore.loadAll();
             if (items.isEmpty()) {
@@ -248,7 +251,7 @@ public class HomePage extends ScrollPane {
                 return;
             }
 
-            Recommendation recommendation = outfitService.generate(items, weather);
+            Recommendation recommendation = outfitService.generate(items, weather, variant);
             outfitTitleLabel.setText(recommendation.title());
             outfitGuidanceLabel.setText(recommendation.guidance());
             outfitItemsPane.getChildren().clear();
@@ -261,8 +264,10 @@ public class HomePage extends ScrollPane {
                 outfitItemsPane.getChildren().add(createOutfitMessage("No matching clothes found yet."));
             }
 
+            generateOutfitButton.setText("Regenerate outfit");
             outfitStatusLabel.setStyle(recommendation.isComplete() ? OUTFIT_STATUS_STYLE : OUTFIT_WARNING_STYLE);
-            outfitStatusLabel.setText(createOutfitStatus(recommendation));
+            outfitStatusLabel.setText(createOutfitStatus(recommendation)
+                    + " Press \"Regenerate outfit\" for another combination.");
         } catch (IOException exception) {
             showOutfitUnavailable("Could not load Library: " + exception.getMessage());
         }
@@ -355,6 +360,7 @@ public class HomePage extends ScrollPane {
 
     private void showOutfitReadyState() {
         generateOutfitButton.setDisable(false);
+        generateOutfitButton.setText("Generate outfit");
         outfitTitleLabel.setText("Outfit plan");
         outfitGuidanceLabel.setText("Weather is ready.");
         outfitItemsPane.getChildren().clear();

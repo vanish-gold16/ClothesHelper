@@ -4,6 +4,7 @@ import com.example.clotheshelper.storage.SavedClothingItem;
 import com.example.clotheshelper.weather.WeatherSnapshot;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -12,8 +13,16 @@ import java.util.Set;
 
 public final class OutfitRecommendationService {
     private static final int MINIMUM_ACCEPTABLE_SCORE = 35;
+    // When several items score close to the best, treat them as interchangeable so
+    // repeated "Generate" presses can rotate between them instead of always
+    // returning the single highest scorer.
+    private static final int VARIETY_MARGIN = 20;
 
     public Recommendation generate(List<SavedClothingItem> items, WeatherSnapshot weather) {
+        return generate(items, weather, 0);
+    }
+
+    public Recommendation generate(List<SavedClothingItem> items, WeatherSnapshot weather, int variant) {
         int feelsLike = (int) Math.floor(weather.apparentTemperatureCelsius());
         Conditions conditions = new Conditions(weather.isRaining(), weather.isWindy());
         Plan plan = createPlan(feelsLike, conditions);
@@ -22,13 +31,14 @@ public final class OutfitRecommendationService {
         List<MissingSlot> missingOptional = new ArrayList<>();
         Set<String> usedItemIds = new HashSet<>();
         boolean onePieceSelected = false;
+        int safeVariant = Math.max(0, variant);
 
         for (Slot slot : plan.slots()) {
             if (slot.role() == Role.BOTTOM && onePieceSelected) {
                 continue;
             }
 
-            Optional<ScoredItem> candidate = findBestCandidate(items, slot, feelsLike, conditions, usedItemIds);
+            Optional<ScoredItem> candidate = findBestCandidate(items, slot, feelsLike, conditions, usedItemIds, safeVariant);
             if (candidate.isEmpty()) {
                 MissingSlot missingSlot = new MissingSlot(slot.label(), slot.advice());
                 if (slot.required()) {
@@ -73,9 +83,10 @@ public final class OutfitRecommendationService {
             Slot slot,
             int feelsLike,
             Conditions conditions,
-            Set<String> usedItemIds
+            Set<String> usedItemIds,
+            int variant
     ) {
-        ScoredItem bestItem = null;
+        List<ScoredItem> candidates = new ArrayList<>();
         for (SavedClothingItem item : items) {
             if (item == null || usedItemIds.contains(item.id())) {
                 continue;
@@ -92,11 +103,26 @@ public final class OutfitRecommendationService {
                 continue;
             }
 
-            if (bestItem == null || score > bestItem.score()) {
-                bestItem = new ScoredItem(item, score);
+            candidates.add(new ScoredItem(item, score));
+        }
+
+        if (candidates.isEmpty()) {
+            return Optional.empty();
+        }
+
+        // Keep the items that score within a small margin of the best one, then rotate
+        // between them based on the requested variant so pressing "Generate" again can
+        // surface a different but still sensible choice.
+        candidates.sort(Comparator.comparingInt(ScoredItem::score).reversed());
+        int bestScore = candidates.get(0).score();
+        List<ScoredItem> topCandidates = new ArrayList<>();
+        for (ScoredItem candidate : candidates) {
+            if (candidate.score() >= bestScore - VARIETY_MARGIN) {
+                topCandidates.add(candidate);
             }
         }
-        return Optional.ofNullable(bestItem);
+
+        return Optional.of(topCandidates.get(variant % topCandidates.size()));
     }
 
     private int score(SavedClothingItem item, Slot slot, int feelsLike, Conditions conditions) {
@@ -110,12 +136,12 @@ public final class OutfitRecommendationService {
             return Integer.MIN_VALUE;
         }
 
-        String season = normalize(item.season());
-        score += seasonScore(season, feelsLike);
+        List<String> seasons = normalizeAll(item.seasons());
+        score += bestSeasonScore(seasons, feelsLike);
         score += warmthScore(type, feelsLike);
-        score += occasionScore(normalize(item.wearOccasion()));
+        score += bestOccasionScore(normalizeAll(item.wearOccasions()));
         score += vibeScore(normalize(item.vibe()), feelsLike);
-        score += conditionScore(type, season, conditions);
+        score += conditionScore(type, seasons, conditions);
 
         if (item.hasPhoto()) {
             score += 2;
@@ -127,10 +153,10 @@ public final class OutfitRecommendationService {
         return score;
     }
 
-    private int conditionScore(String type, String season, Conditions conditions) {
+    private int conditionScore(String type, List<String> seasons, Conditions conditions) {
         int score = 0;
         if (conditions.raining()) {
-            if ("rainy".equals(season)) {
+            if (seasons.contains("rainy")) {
                 score += 25;
             }
             if (isAny(type, "jacket", "coat")) {
@@ -150,7 +176,7 @@ public final class OutfitRecommendationService {
     }
 
     private Plan createPlan(int feelsLike, Conditions conditions) {
-        if (feelsLike >= 24) {
+        if (feelsLike >= 22) {
             List<Slot> slots = new ArrayList<>(List.of(
                     baseTop(true),
                     hotBottom(),
@@ -173,7 +199,7 @@ public final class OutfitRecommendationService {
                     "Comfortable weather: start light, keep an extra layer optional.",
                     List.of(
                             baseTop(true),
-                            regularBottom(),
+                            mildBottom(),
                             lightShoes(),
                             conditions.raining() ? rainLayer() : lightExtraLayer()
                     )
@@ -355,6 +381,17 @@ public final class OutfitRecommendationService {
         );
     }
 
+    private Slot mildBottom() {
+        return new Slot(
+                "Bottom",
+                Role.BOTTOM,
+                true,
+                types("pants", "jeans", "shorts", "skirt"),
+                types("leggings"),
+                "Add pants, jeans, shorts, or a skirt."
+        );
+    }
+
     private Slot regularBottom() {
         return new Slot(
                 "Bottom",
@@ -433,6 +470,43 @@ public final class OutfitRecommendationService {
         );
     }
 
+    private List<String> normalizeAll(List<String> values) {
+        if (values == null || values.isEmpty()) {
+            return List.of();
+        }
+
+        List<String> normalized = new ArrayList<>();
+        for (String value : values) {
+            String normalizedValue = normalize(value);
+            if (normalizedValue != null) {
+                normalized.add(normalizedValue);
+            }
+        }
+        return normalized;
+    }
+
+    // An item can be tagged for several seasons; reward it for whichever fits the
+    // weather best so a "Hot, Warm" piece is not dragged down by its colder tag.
+    private int bestSeasonScore(List<String> seasons, int feelsLike) {
+        if (seasons.isEmpty()) {
+            return 0;
+        }
+
+        int best = Integer.MIN_VALUE;
+        for (String season : seasons) {
+            best = Math.max(best, seasonScore(season, feelsLike));
+        }
+        return best;
+    }
+
+    private int bestOccasionScore(List<String> occasions) {
+        int best = 0;
+        for (String occasion : occasions) {
+            best = Math.max(best, occasionScore(occasion));
+        }
+        return best;
+    }
+
     private int seasonScore(String season, int feelsLike) {
         if (season == null) {
             return 0;
@@ -441,7 +515,7 @@ public final class OutfitRecommendationService {
             return 12;
         }
 
-        if (feelsLike >= 24) {
+        if (feelsLike >= 22) {
             return switch (season) {
                 case "hot" -> 35;
                 case "warm" -> 18;
@@ -501,12 +575,20 @@ public final class OutfitRecommendationService {
     }
 
     private int warmthScore(String type, int feelsLike) {
-        if (feelsLike >= 24) {
+        if (feelsLike >= 22) {
             if (isAny(type, "shorts", "sandals")) {
-                return 30;
+                return 40;
             }
             if (isAny(type, "tshirt", "top", "shirt", "blouse", "dress", "skirt")) {
                 return 20;
+            }
+            // Long bottoms are uncomfortable in real heat, so push them below shorts
+            // even when their season tag matches.
+            if (isAny(type, "jeans", "pants")) {
+                return -10;
+            }
+            if (isAny(type, "leggings")) {
+                return -20;
             }
             if (isAny(type, "sweater", "hoodie", "sweatshirt", "boots")) {
                 return -35;

@@ -21,6 +21,8 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 public class ClothingItemForm extends GridPane {
@@ -28,9 +30,9 @@ public class ClothingItemForm extends GridPane {
     private final ComboBox<ClothingType> clothingTypeField = createEnumComboBox(ClothingType.values(), "Select clothing type");
     private final TextField brandField = createTextField("Brand");
     private final TextField sizeField = createTextField("Size");
-    private final ComboBox<Seasons> seasonField = createEnumComboBox(Seasons.values(), "Select season");
+    private final EnumMultiSelect<Seasons> seasonField = new EnumMultiSelect<>(Seasons.values(), "Select seasons");
     private final ComboBox<MainColor> mainColorField = createMainColorComboBox();
-    private final ComboBox<WearOccasion> wearOccasionField = createEnumComboBox(WearOccasion.values(), "Select occasion");
+    private final EnumMultiSelect<WearOccasion> wearOccasionField = new EnumMultiSelect<>(WearOccasion.values(), "Select occasions");
     private final ComboBox<Vibe> vibeField = createEnumComboBox(Vibe.values(), "Select vibe");
     private final TextArea notesField = createNotesField();
 
@@ -60,9 +62,9 @@ public class ClothingItemForm extends GridPane {
                 clothingTypeField.getValue(),
                 brandField.getText(),
                 sizeField.getText(),
-                seasonField.getValue(),
+                seasonField.getValues(),
                 mainColorField.getValue(),
-                wearOccasionField.getValue(),
+                wearOccasionField.getValues(),
                 vibeField.getValue(),
                 notesField.getText(),
                 sourcePhotoPath,
@@ -75,9 +77,9 @@ public class ClothingItemForm extends GridPane {
         clothingTypeField.setValue(findEnumByLabel(ClothingType.values(), item.clothingType()));
         brandField.setText(safeText(item.brand()));
         sizeField.setText(safeText(item.size()));
-        seasonField.setValue(findEnumByLabel(Seasons.values(), item.season()));
+        seasonField.setValues(findEnumsByLabels(Seasons.values(), item.seasons()));
         mainColorField.setValue(findEnumByLabel(MainColor.values(), item.mainColor()));
-        wearOccasionField.setValue(findEnumByLabel(WearOccasion.values(), item.wearOccasion()));
+        wearOccasionField.setValues(findEnumsByLabels(WearOccasion.values(), item.wearOccasions()));
         vibeField.setValue(findEnumByLabel(Vibe.values(), item.vibe()));
         notesField.setText(safeText(item.notes()));
     }
@@ -87,9 +89,9 @@ public class ClothingItemForm extends GridPane {
         clothingTypeField.setValue(null);
         brandField.clear();
         sizeField.clear();
-        seasonField.setValue(null);
+        seasonField.clear();
         mainColorField.setValue(null);
-        wearOccasionField.setValue(null);
+        wearOccasionField.clear();
         vibeField.setValue(null);
         notesField.clear();
     }
@@ -157,6 +159,21 @@ public class ClothingItemForm extends GridPane {
         Label label = new Label(text);
         label.setStyle(UiStyles.FIELD_LABEL);
         return label;
+    }
+
+    private <T extends Enum<T>> List<T> findEnumsByLabels(T[] values, List<String> labels) {
+        List<T> matches = new ArrayList<>();
+        if (labels == null) {
+            return matches;
+        }
+
+        for (String label : labels) {
+            T match = findEnumByLabel(values, label);
+            if (match != null && !matches.contains(match)) {
+                matches.add(match);
+            }
+        }
+        return matches;
     }
 
     private <T extends Enum<T>> T findEnumByLabel(T[] values, String label) {

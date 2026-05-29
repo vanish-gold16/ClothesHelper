@@ -351,8 +351,8 @@ public class LibraryPage extends ScrollPane {
                 && containsText(item.brand(), brandFilterField.getText())
                 && matchesSelection(typeFilter, ALL_TYPES, item.clothingType())
                 && matchesSelection(colorFilter, ALL_COLORS, item.mainColor())
-                && matchesSelection(seasonFilter, ALL_SEASONS, item.season())
-                && matchesSelection(occasionFilter, ALL_OCCASIONS, item.wearOccasion())
+                && matchesSelection(seasonFilter, ALL_SEASONS, item.seasons())
+                && matchesSelection(occasionFilter, ALL_OCCASIONS, item.wearOccasions())
                 && matchesSelection(vibeFilter, ALL_VIBES, item.vibe());
     }
 
@@ -378,6 +378,11 @@ public class LibraryPage extends ScrollPane {
     private boolean matchesSelection(ComboBox<String> comboBox, String allValue, String itemValue) {
         String selectedValue = comboBox.getValue();
         return selectedValue == null || selectedValue.equals(allValue) || selectedValue.equals(itemValue);
+    }
+
+    private boolean matchesSelection(ComboBox<String> comboBox, String allValue, List<String> itemValues) {
+        String selectedValue = comboBox.getValue();
+        return selectedValue == null || selectedValue.equals(allValue) || itemValues.contains(selectedValue);
     }
 
     private boolean containsText(String value, String query) {
@@ -414,8 +419,8 @@ public class LibraryPage extends ScrollPane {
     private void updateFilterOptions() {
         updateComboBoxOptions(typeFilter, ALL_TYPES, allItems.stream().map(SavedClothingItem::clothingType).toList());
         updateComboBoxOptions(colorFilter, ALL_COLORS, allItems.stream().map(SavedClothingItem::mainColor).toList());
-        updateComboBoxOptions(seasonFilter, ALL_SEASONS, allItems.stream().map(SavedClothingItem::season).toList());
-        updateComboBoxOptions(occasionFilter, ALL_OCCASIONS, allItems.stream().map(SavedClothingItem::wearOccasion).toList());
+        updateComboBoxOptions(seasonFilter, ALL_SEASONS, allItems.stream().flatMap(item -> item.seasons().stream()).toList());
+        updateComboBoxOptions(occasionFilter, ALL_OCCASIONS, allItems.stream().flatMap(item -> item.wearOccasions().stream()).toList());
         updateComboBoxOptions(vibeFilter, ALL_VIBES, allItems.stream().map(SavedClothingItem::vibe).toList());
     }
 

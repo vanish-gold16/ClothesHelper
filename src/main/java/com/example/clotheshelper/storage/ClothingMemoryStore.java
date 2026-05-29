@@ -246,10 +246,10 @@ public class ClothingMemoryStore {
                 firstText(labelValue(details, "clothingType"), labelValue(catalogItem, "clothingType")),
                 textValue(details, "brand"),
                 textValue(details, "size"),
-                labelValue(details, "season"),
+                labelListValue(details, "season"),
                 firstText(labelValue(details, "mainColor"), labelValue(catalogItem, "mainColor")),
                 firstText(hexValue(details, "mainColor"), hexValue(catalogItem, "mainColor")),
-                labelValue(details, "wearOccasion"),
+                labelListValue(details, "wearOccasion"),
                 labelValue(details, "vibe"),
                 textValue(details, "notes"),
                 itemJsonPathText == null ? null : resolveProjectPath(itemJsonPathText),
@@ -278,6 +278,39 @@ public class ClothingMemoryStore {
 
     private String labelValue(Map<?, ?> map, String key) {
         return textValue(mapValue(map, key), "label");
+    }
+
+    /**
+     * Reads a list of enum labels. Accepts the current array format as well as the
+     * legacy single-object ({@code {"value","label"}}) and plain-string formats so
+     * older wardrobe files keep loading.
+     */
+    private List<String> labelListValue(Map<?, ?> map, String key) {
+        if (map == null) {
+            return List.of();
+        }
+
+        Object value = map.get(key);
+        List<String> labels = new ArrayList<>();
+        if (value instanceof List<?> list) {
+            for (Object element : list) {
+                addLabel(labels, element);
+            }
+        } else {
+            addLabel(labels, value);
+        }
+        return labels;
+    }
+
+    private void addLabel(List<String> labels, Object element) {
+        if (element instanceof Map<?, ?> enumMap) {
+            String label = textValue(enumMap, "label");
+            if (label != null && !label.isBlank()) {
+                labels.add(label);
+            }
+        } else if (element instanceof String text && !text.isBlank()) {
+            labels.add(text);
+        }
     }
 
     private String hexValue(Map<?, ?> map, String key) {
@@ -364,9 +397,9 @@ public class ClothingMemoryStore {
         appendProperty(json, 2, "clothingType", enumJson(draft.clothingType()), true);
         appendProperty(json, 2, "brand", jsonNullableText(draft.brand()), true);
         appendProperty(json, 2, "size", jsonNullableText(draft.size()), true);
-        appendProperty(json, 2, "season", enumJson(draft.season()), true);
+        appendProperty(json, 2, "season", enumListJson(draft.seasons()), true);
         appendProperty(json, 2, "mainColor", mainColorJson(draft.mainColor()), true);
-        appendProperty(json, 2, "wearOccasion", enumJson(draft.wearOccasion()), true);
+        appendProperty(json, 2, "wearOccasion", enumListJson(draft.wearOccasions()), true);
         appendProperty(json, 2, "vibe", enumJson(draft.vibe()), true);
         appendProperty(json, 2, "notes", jsonNullableText(draft.notes()), false);
         appendObjectEnd(json, 1, true);
@@ -508,6 +541,22 @@ public class ClothingMemoryStore {
         }
 
         return "{\"value\": " + jsonString(value.name()) + ", \"label\": " + jsonString(value.toString()) + "}";
+    }
+
+    private String enumListJson(List<? extends Enum<?>> values) {
+        if (values == null || values.isEmpty()) {
+            return "[]";
+        }
+
+        StringBuilder json = new StringBuilder("[");
+        for (int index = 0; index < values.size(); index++) {
+            json.append(enumJson(values.get(index)));
+            if (index < values.size() - 1) {
+                json.append(", ");
+            }
+        }
+        json.append("]");
+        return json.toString();
     }
 
     private Map<String, Object> enumMap(Enum<?> value) {
