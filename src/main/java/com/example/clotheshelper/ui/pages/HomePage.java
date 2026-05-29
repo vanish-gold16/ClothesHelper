@@ -56,6 +56,7 @@ public class HomePage extends ScrollPane {
     private final PragueWeatherClient weatherClient = new PragueWeatherClient();
     private final OutfitRecommendationService outfitService = new OutfitRecommendationService();
     private final Button refreshButton = new Button("Refresh");
+    private final Button generateOutfitButton = new Button("Generate outfit");
     private final Label temperatureLabel = new Label("Loading...");
     private final Label observedAtLabel = new Label("Current weather in Prague");
     private final Label apparentTemperatureLabel = new Label("--");
@@ -66,6 +67,7 @@ public class HomePage extends ScrollPane {
     private final Label outfitStatusLabel = new Label("Add clothes to Library to generate an outfit.");
 
     private boolean loading;
+    private WeatherSnapshot lastWeather;
 
     public HomePage() {
         Label subtitleLabel = new Label("Current Prague weather for easier outfit choices.");
@@ -142,6 +144,16 @@ public class HomePage extends ScrollPane {
     private VBox createOutfitCard() {
         outfitTitleLabel.setStyle(UiStyles.CARD_TITLE);
 
+        generateOutfitButton.setStyle(UiStyles.PRIMARY_BUTTON);
+        generateOutfitButton.setDisable(true);
+        generateOutfitButton.setOnAction(event -> generateOutfit());
+
+        Region headerSpacer = new Region();
+        HBox.setHgrow(headerSpacer, Priority.ALWAYS);
+
+        HBox titleRow = new HBox(16, outfitTitleLabel, headerSpacer, generateOutfitButton);
+        titleRow.setAlignment(Pos.CENTER_LEFT);
+
         outfitGuidanceLabel.setStyle(UiStyles.SUBTITLE);
         outfitGuidanceLabel.setWrapText(true);
 
@@ -152,7 +164,7 @@ public class HomePage extends ScrollPane {
         outfitStatusLabel.setStyle(OUTFIT_STATUS_STYLE);
         outfitStatusLabel.setWrapText(true);
 
-        VBox card = new VBox(16, outfitTitleLabel, outfitGuidanceLabel, outfitItemsPane, outfitStatusLabel);
+        VBox card = new VBox(16, titleRow, outfitGuidanceLabel, outfitItemsPane, outfitStatusLabel);
         card.setAlignment(Pos.TOP_LEFT);
         card.setPadding(new Insets(24));
         card.setMaxWidth(LAYOUT_MAX_WIDTH);
@@ -178,6 +190,8 @@ public class HomePage extends ScrollPane {
 
     private void showLoadingState() {
         refreshButton.setDisable(true);
+        generateOutfitButton.setDisable(true);
+        lastWeather = null;
         temperatureLabel.setText("Loading...");
         observedAtLabel.setText("Current weather in Prague");
         apparentTemperatureLabel.setText("--");
@@ -186,14 +200,24 @@ public class HomePage extends ScrollPane {
     }
 
     private void showWeather(WeatherSnapshot weather) {
+        lastWeather = weather;
         temperatureLabel.setText(formatTemperature(weather.temperatureCelsius()));
         observedAtLabel.setText("Updated at " + OBSERVED_TIME_FORMAT.format(weather.observedAt()) + " Prague time");
         apparentTemperatureLabel.setText(formatTemperature(weather.apparentTemperatureCelsius()));
         statusLabel.setText("Open-Meteo forecast API, no API key required.");
-        renderOutfit(weather);
+        showOutfitReadyState();
+    }
+
+    private void generateOutfit() {
+        if (lastWeather == null) {
+            return;
+        }
+        renderOutfit(lastWeather);
     }
 
     private void showErrorState(Throwable throwable) {
+        lastWeather = null;
+        generateOutfitButton.setDisable(true);
         temperatureLabel.setText("--");
         observedAtLabel.setText("Try refreshing in a moment");
         apparentTemperatureLabel.setText("--");
@@ -326,7 +350,16 @@ public class HomePage extends ScrollPane {
         outfitGuidanceLabel.setText("Waiting for Prague weather...");
         outfitItemsPane.getChildren().clear();
         outfitStatusLabel.setStyle(OUTFIT_STATUS_STYLE);
-        outfitStatusLabel.setText("ClothesHelper will generate layers after the weather loads.");
+        outfitStatusLabel.setText("ClothesHelper will be ready to generate layers after the weather loads.");
+    }
+
+    private void showOutfitReadyState() {
+        generateOutfitButton.setDisable(false);
+        outfitTitleLabel.setText("Outfit plan");
+        outfitGuidanceLabel.setText("Weather is ready.");
+        outfitItemsPane.getChildren().clear();
+        outfitStatusLabel.setStyle(OUTFIT_STATUS_STYLE);
+        outfitStatusLabel.setText("Tap \"Generate outfit\" to build a layered outfit for the current Prague weather.");
     }
 
     private void showOutfitUnavailable(String message) {
