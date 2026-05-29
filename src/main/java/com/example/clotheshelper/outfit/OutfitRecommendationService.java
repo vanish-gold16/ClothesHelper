@@ -15,7 +15,8 @@ public final class OutfitRecommendationService {
 
     public Recommendation generate(List<SavedClothingItem> items, WeatherSnapshot weather) {
         int feelsLike = (int) Math.floor(weather.apparentTemperatureCelsius());
-        Plan plan = createPlan(feelsLike);
+        Conditions conditions = new Conditions(weather.isRaining(), weather.isWindy());
+        Plan plan = createPlan(feelsLike, conditions);
         List<Pick> picks = new ArrayList<>();
         List<MissingSlot> missingRequired = new ArrayList<>();
         List<MissingSlot> missingOptional = new ArrayList<>();
@@ -27,7 +28,7 @@ public final class OutfitRecommendationService {
                 continue;
             }
 
-            Optional<ScoredItem> candidate = findBestCandidate(items, slot, feelsLike, usedItemIds);
+            Optional<ScoredItem> candidate = findBestCandidate(items, slot, feelsLike, conditions, usedItemIds);
             if (candidate.isEmpty()) {
                 MissingSlot missingSlot = new MissingSlot(slot.label(), slot.advice());
                 if (slot.required()) {
@@ -46,7 +47,7 @@ public final class OutfitRecommendationService {
 
         return new Recommendation(
                 plan.title(),
-                plan.guidance(),
+                guidanceFor(plan, conditions),
                 feelsLike,
                 picks,
                 missingRequired,
@@ -54,10 +55,24 @@ public final class OutfitRecommendationService {
         );
     }
 
+    private String guidanceFor(Plan plan, Conditions conditions) {
+        if (conditions.raining() && conditions.windy()) {
+            return plan.guidance() + " Rain and wind expected, so favour a water-resistant jacket or coat.";
+        }
+        if (conditions.raining()) {
+            return plan.guidance() + " Rain expected, so bring a water-resistant layer and skip open shoes.";
+        }
+        if (conditions.windy()) {
+            return plan.guidance() + " It is windy, so a jacket will help cut the chill.";
+        }
+        return plan.guidance();
+    }
+
     private Optional<ScoredItem> findBestCandidate(
             List<SavedClothingItem> items,
             Slot slot,
             int feelsLike,
+            Conditions conditions,
             Set<String> usedItemIds
     ) {
         ScoredItem bestItem = null;
@@ -66,8 +81,14 @@ public final class OutfitRecommendationService {
                 continue;
             }
 
-            int score = score(item, slot, feelsLike);
-            if (score < MINIMUM_ACCEPTABLE_SCORE) {
+            int score = score(item, slot, feelsLike, conditions);
+            if (score == Integer.MIN_VALUE) {
+                continue;
+            }
+            // Required slots accept the best type-matching item even below the comfort
+            // threshold, so a usable base layer is never reported as missing just because
+            // its season tag is penalised. Optional slots stay conservative.
+            if (!slot.required() && score < MINIMUM_ACCEPTABLE_SCORE) {
                 continue;
             }
 
@@ -78,7 +99,7 @@ public final class OutfitRecommendationService {
         return Optional.ofNullable(bestItem);
     }
 
-    private int score(SavedClothingItem item, Slot slot, int feelsLike) {
+    private int score(SavedClothingItem item, Slot slot, int feelsLike, Conditions conditions) {
         String type = normalize(item.clothingType());
         int score;
         if (slot.preferredTypes().contains(type)) {
@@ -89,10 +110,12 @@ public final class OutfitRecommendationService {
             return Integer.MIN_VALUE;
         }
 
-        score += seasonScore(normalize(item.season()), feelsLike);
+        String season = normalize(item.season());
+        score += seasonScore(season, feelsLike);
         score += warmthScore(type, feelsLike);
         score += occasionScore(normalize(item.wearOccasion()));
         score += vibeScore(normalize(item.vibe()), feelsLike);
+        score += conditionScore(type, season, conditions);
 
         if (item.hasPhoto()) {
             score += 2;
@@ -104,17 +127,43 @@ public final class OutfitRecommendationService {
         return score;
     }
 
-    private Plan createPlan(int feelsLike) {
+    private int conditionScore(String type, String season, Conditions conditions) {
+        int score = 0;
+        if (conditions.raining()) {
+            if ("rainy".equals(season)) {
+                score += 25;
+            }
+            if (isAny(type, "jacket", "coat")) {
+                score += 15;
+            }
+            if (isAny(type, "boots")) {
+                score += 8;
+            }
+            if (isAny(type, "sandals")) {
+                score -= 30;
+            }
+        }
+        if (conditions.windy() && isAny(type, "jacket", "coat", "blazer")) {
+            score += 12;
+        }
+        return score;
+    }
+
+    private Plan createPlan(int feelsLike, Conditions conditions) {
         if (feelsLike >= 24) {
+            List<Slot> slots = new ArrayList<>(List.of(
+                    baseTop(true),
+                    hotBottom(),
+                    lightShoes()
+            ));
+            if (conditions.raining()) {
+                slots.add(rainLayer());
+            }
+            slots.add(optionalHat());
             return new Plan(
                     "Light one-layer outfit",
                     "It feels warm in Prague, so breathable pieces should do the job.",
-                    List.of(
-                            baseTop(true),
-                            hotBottom(),
-                            lightShoes(),
-                            optionalHat()
-                    )
+                    List.copyOf(slots)
             );
         }
 
@@ -126,7 +175,7 @@ public final class OutfitRecommendationService {
                             baseTop(true),
                             regularBottom(),
                             lightShoes(),
-                            lightExtraLayer()
+                            conditions.raining() ? rainLayer() : lightExtraLayer()
                     )
             );
         }
@@ -237,6 +286,17 @@ public final class OutfitRecommendationService {
                 types("sweater", "hoodie", "sweatshirt"),
                 types("blazer", "shirt"),
                 "Add a warm sweater, hoodie, or sweatshirt."
+        );
+    }
+
+    private Slot rainLayer() {
+        return new Slot(
+                "Rain layer",
+                Role.OUTERWEAR,
+                false,
+                types("jacket", "coat"),
+                types("blazer"),
+                "Add a water-resistant jacket or coat for the rain."
         );
     }
 
@@ -606,6 +666,9 @@ public final class OutfitRecommendationService {
             return null;
         }
         return value.trim();
+    }
+
+    private record Conditions(boolean raining, boolean windy) {
     }
 
     private enum Role {

@@ -18,7 +18,7 @@ public final class PragueWeatherClient {
             "https://api.open-meteo.com/v1/forecast"
                     + "?latitude=50.0755"
                     + "&longitude=14.4378"
-                    + "&current=temperature_2m,apparent_temperature"
+                    + "&current=temperature_2m,apparent_temperature,precipitation,wind_speed_10m"
                     + "&timezone=Europe%2FPrague"
     );
     private static final Pattern CURRENT_BLOCK_PATTERN = Pattern.compile(
@@ -53,6 +53,8 @@ public final class PragueWeatherClient {
         return new WeatherSnapshot(
                 readDouble(current, "temperature_2m"),
                 readDouble(current, "apparent_temperature"),
+                readOptionalDouble(current, "precipitation"),
+                readOptionalDouble(current, "wind_speed_10m"),
                 LocalDateTime.parse(readString(current, "time"))
         );
     }
@@ -69,6 +71,14 @@ public final class PragueWeatherClient {
         Matcher matcher = numberPattern(fieldName).matcher(json);
         if (!matcher.find()) {
             throw new IllegalArgumentException("Open-Meteo response misses " + fieldName);
+        }
+        return Double.parseDouble(matcher.group(1));
+    }
+
+    private double readOptionalDouble(String json, String fieldName) {
+        Matcher matcher = numberPattern(fieldName).matcher(json);
+        if (!matcher.find()) {
+            return 0.0;
         }
         return Double.parseDouble(matcher.group(1));
     }
