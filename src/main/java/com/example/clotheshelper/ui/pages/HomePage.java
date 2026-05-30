@@ -7,7 +7,11 @@ import com.example.clotheshelper.outfit.OutfitRecommendationService.MissingSlot;
 import com.example.clotheshelper.outfit.OutfitRecommendationService.Pick;
 import com.example.clotheshelper.outfit.OutfitRecommendationService.Recommendation;
 import com.example.clotheshelper.storage.ClothingMemoryStore;
+import com.example.clotheshelper.storage.OutfitMemoryStore;
+import com.example.clotheshelper.storage.OutfitPiece;
 import com.example.clotheshelper.storage.SavedClothingItem;
+import com.example.clotheshelper.storage.SavedOutfit;
+import com.example.clotheshelper.ui.components.NotificationBanner;
 import com.example.clotheshelper.ui.components.PageHeader;
 import com.example.clotheshelper.ui.styles.UiStyles;
 import com.example.clotheshelper.weather.PragueWeatherClient;
@@ -30,6 +34,7 @@ import javafx.scene.layout.VBox;
 
 import java.io.IOException;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
@@ -57,12 +62,15 @@ public class HomePage extends ScrollPane {
             + "-fx-text-fill: -app-error;";
 
     private final ClothingMemoryStore memoryStore = new ClothingMemoryStore();
+    private final OutfitMemoryStore outfitStore = new OutfitMemoryStore();
     private final PragueWeatherClient weatherClient = new PragueWeatherClient();
     private final OutfitRecommendationService outfitService = new OutfitRecommendationService();
     private final Button refreshButton = new Button("Refresh");
     private final ComboBox<OutfitPattern> patternField = new ComboBox<>(FXCollections.observableArrayList(OutfitPattern.values()));
     private final ComboBox<OutfitStyle> styleField = new ComboBox<>(FXCollections.observableArrayList(OutfitStyle.values()));
     private final Button generateOutfitButton = new Button("Generate outfit");
+    private final Button saveOutfitButton = new Button("Save outfit");
+    private final NotificationBanner outfitNotification = new NotificationBanner();
     private final Label temperatureLabel = new Label("Loading...");
     private final Label observedAtLabel = new Label("Current weather in Prague");
     private final Label apparentTemperatureLabel = new Label("--");
@@ -75,6 +83,7 @@ public class HomePage extends ScrollPane {
     private boolean loading;
     private WeatherSnapshot lastWeather;
     private int outfitVariant;
+    private Recommendation lastRecommendation;
 
     public HomePage() {
         Label subtitleLabel = new Label("Current Prague weather for easier outfit choices.");
@@ -155,6 +164,10 @@ public class HomePage extends ScrollPane {
         generateOutfitButton.setDisable(true);
         generateOutfitButton.setOnAction(event -> generateOutfit());
 
+        saveOutfitButton.setStyle(UiStyles.SUCCESS_BUTTON);
+        saveOutfitButton.setDisable(true);
+        saveOutfitButton.setOnAction(event -> saveOutfit());
+
         Label patternLabel = new Label("Pattern");
         patternLabel.setStyle(UiStyles.FIELD_LABEL);
         patternField.setStyle(UiStyles.COMBO_BOX);
@@ -171,14 +184,8 @@ public class HomePage extends ScrollPane {
         HBox styleBox = new HBox(8, styleLabel, styleField);
         styleBox.setAlignment(Pos.CENTER_LEFT);
 
-        Region headerSpacer = new Region();
-        HBox.setHgrow(headerSpacer, Priority.ALWAYS);
-
-        HBox controlsRow = new HBox(16, styleBox, patternBox, generateOutfitButton);
+        FlowPane controlsRow = new FlowPane(12, 12, styleBox, patternBox, generateOutfitButton, saveOutfitButton);
         controlsRow.setAlignment(Pos.CENTER_LEFT);
-
-        HBox titleRow = new HBox(16, outfitTitleLabel, headerSpacer, controlsRow);
-        titleRow.setAlignment(Pos.CENTER_LEFT);
 
         outfitGuidanceLabel.setStyle(UiStyles.SUBTITLE);
         outfitGuidanceLabel.setWrapText(true);
@@ -190,7 +197,7 @@ public class HomePage extends ScrollPane {
         outfitStatusLabel.setStyle(OUTFIT_STATUS_STYLE);
         outfitStatusLabel.setWrapText(true);
 
-        VBox card = new VBox(16, titleRow, outfitGuidanceLabel, outfitItemsPane, outfitStatusLabel);
+        VBox card = new VBox(16, outfitTitleLabel, controlsRow, outfitGuidanceLabel, outfitItemsPane, outfitStatusLabel, outfitNotification);
         card.setAlignment(Pos.TOP_LEFT);
         card.setPadding(new Insets(24));
         card.setMaxWidth(LAYOUT_MAX_WIDTH);
@@ -243,6 +250,47 @@ public class HomePage extends ScrollPane {
         outfitVariant++;
     }
 
+    private void saveOutfit() {
+        if (lastRecommendation == null || !lastRecommendation.hasPicks()) {
+            return;
+        }
+
+        List<OutfitPiece> pieces = new ArrayList<>();
+        for (Pick pick : lastRecommendation.picks()) {
+            SavedClothingItem item = pick.item();
+            pieces.add(new OutfitPiece(
+                    pick.slotLabel(),
+                    item.id(),
+                    createItemTitle(item),
+                    cleanText(item.mainColorHex())
+            ));
+        }
+
+        SavedOutfit outfit = new SavedOutfit(
+                null,
+                null,
+                null,
+                lastRecommendation.title(),
+                lastRecommendation.guidance(),
+                lastRecommendation.feelsLike(),
+                pieces
+        );
+
+        try {
+            outfitStore.save(outfit);
+            saveOutfitButton.setDisable(true);
+            outfitNotification.showMessage("Outfit saved. Find it on your Profile page.", false);
+        } catch (IOException exception) {
+            outfitNotification.showMessage("Could not save outfit: " + exception.getMessage(), true);
+        }
+    }
+
+    private void resetSavedOutfit() {
+        lastRecommendation = null;
+        saveOutfitButton.setDisable(true);
+        outfitNotification.hide();
+    }
+
     private void showErrorState(Throwable throwable) {
         lastWeather = null;
         generateOutfitButton.setDisable(true);
@@ -290,6 +338,7 @@ public class HomePage extends ScrollPane {
             outfitTitleLabel.setText(recommendation.title());
             outfitGuidanceLabel.setText(recommendation.guidance());
             outfitItemsPane.getChildren().clear();
+            outfitNotification.hide();
 
             for (Pick pick : recommendation.picks()) {
                 outfitItemsPane.getChildren().add(createOutfitPick(pick));
@@ -299,6 +348,8 @@ public class HomePage extends ScrollPane {
                 outfitItemsPane.getChildren().add(createOutfitMessage("No matching clothes found yet."));
             }
 
+            lastRecommendation = recommendation.hasPicks() ? recommendation : null;
+            saveOutfitButton.setDisable(lastRecommendation == null);
             generateOutfitButton.setText("Regenerate outfit");
             outfitStatusLabel.setStyle(recommendation.isComplete() ? OUTFIT_STATUS_STYLE : OUTFIT_WARNING_STYLE);
             outfitStatusLabel.setText(createOutfitStatus(recommendation)
@@ -391,6 +442,7 @@ public class HomePage extends ScrollPane {
         outfitItemsPane.getChildren().clear();
         outfitStatusLabel.setStyle(OUTFIT_STATUS_STYLE);
         outfitStatusLabel.setText("ClothesHelper will be ready to generate layers after the weather loads.");
+        resetSavedOutfit();
     }
 
     private void showOutfitReadyState() {
@@ -401,6 +453,7 @@ public class HomePage extends ScrollPane {
         outfitItemsPane.getChildren().clear();
         outfitStatusLabel.setStyle(OUTFIT_STATUS_STYLE);
         outfitStatusLabel.setText("Tap \"Generate outfit\" to build a layered outfit for the current Prague weather.");
+        resetSavedOutfit();
     }
 
     private void showOutfitUnavailable(String message) {
@@ -409,6 +462,7 @@ public class HomePage extends ScrollPane {
         outfitItemsPane.getChildren().clear();
         outfitStatusLabel.setStyle(OUTFIT_STATUS_STYLE);
         outfitStatusLabel.setText(message);
+        resetSavedOutfit();
     }
 
     private String createItemTitle(SavedClothingItem item) {

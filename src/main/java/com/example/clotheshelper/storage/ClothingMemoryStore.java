@@ -659,7 +659,7 @@ public class ClothingMemoryStore {
         return escaped.toString();
     }
 
-    private static class JsonParser {
+    static class JsonParser {
         private final String source;
         private int index;
 
@@ -864,7 +864,7 @@ public class ClothingMemoryStore {
         }
     }
 
-    private static class JsonWriter {
+    static class JsonWriter {
         static String write(Object value) {
             StringBuilder json = new StringBuilder();
             appendValue(json, value, 0);

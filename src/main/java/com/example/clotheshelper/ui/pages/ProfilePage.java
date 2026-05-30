@@ -1,16 +1,24 @@
 package com.example.clotheshelper.ui.pages;
 
 import com.example.clotheshelper.storage.ClothingMemoryStore;
+import com.example.clotheshelper.storage.OutfitMemoryStore;
+import com.example.clotheshelper.storage.OutfitPiece;
 import com.example.clotheshelper.storage.SavedClothingItem;
+import com.example.clotheshelper.storage.SavedOutfit;
 import com.example.clotheshelper.ui.components.PageHeader;
 import com.example.clotheshelper.ui.styles.UiStyles;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -20,6 +28,9 @@ import javafx.scene.shape.Circle;
 
 import java.io.IOException;
 import java.net.URL;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -35,9 +46,17 @@ public class ProfilePage extends ScrollPane {
     private static final String STAT_VALUE_STYLE = "-fx-font-size: 18px;"
             + "-fx-font-weight: bold;"
             + "-fx-text-fill: -app-text;";
+    private static final String OUTFIT_PIECE_STYLE = "-fx-background-color: -app-muted-surface;"
+            + "-fx-border-color: -app-border;"
+            + "-fx-border-radius: 6;"
+            + "-fx-background-radius: 6;";
+    private static final DateTimeFormatter SAVED_AT_FORMAT = DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm")
+            .withZone(ZoneId.systemDefault());
 
     private final ClothingMemoryStore memoryStore = new ClothingMemoryStore();
+    private final OutfitMemoryStore outfitStore = new OutfitMemoryStore();
     private final String displayName = createDisplayName();
+    private final VBox outfitsContainer = new VBox(12);
     private final Label totalItemsValueLabel = new Label();
     private final Label favoriteColorValueLabel = new Label();
     private final Label favoriteColorCountLabel = new Label();
@@ -48,7 +67,8 @@ public class ProfilePage extends ScrollPane {
     public ProfilePage() {
         VBox pageContent = new VBox(24,
                 new PageHeader("Profile", "Your visible profile information.", LAYOUT_MAX_WIDTH),
-                createProfileCard()
+                createProfileCard(),
+                createOutfitsCard()
         );
         pageContent.setAlignment(Pos.TOP_CENTER);
         pageContent.setPadding(new Insets(32));
@@ -74,6 +94,182 @@ public class ProfilePage extends ScrollPane {
             favoriteBrandValueLabel.setText("Could not load");
             favoriteBrandCountLabel.setText(exception.getMessage());
         }
+        refreshOutfits();
+    }
+
+    private void refreshOutfits() {
+        outfitsContainer.getChildren().clear();
+        try {
+            List<SavedOutfit> outfits = outfitStore.loadAll();
+            if (outfits.isEmpty()) {
+                outfitsContainer.getChildren().add(createOutfitMessage(
+                        "No saved outfits yet. Generate one on the Home page and tap \"Save outfit\"."));
+                return;
+            }
+            for (SavedOutfit outfit : outfits) {
+                outfitsContainer.getChildren().add(createOutfitCard(outfit));
+            }
+        } catch (IOException exception) {
+            outfitsContainer.getChildren().add(createOutfitMessage(
+                    "Could not load saved outfits: " + exception.getMessage()));
+        }
+    }
+
+    private VBox createOutfitsCard() {
+        Label cardTitle = new Label("Saved outfits");
+        cardTitle.setStyle(UiStyles.CARD_TITLE);
+
+        Label subtitle = new Label("Outfits you kept from the Home page.");
+        subtitle.setStyle(UiStyles.SUBTITLE);
+
+        outfitsContainer.setAlignment(Pos.TOP_LEFT);
+        outfitsContainer.setMaxWidth(Double.MAX_VALUE);
+
+        VBox card = new VBox(16, cardTitle, subtitle, outfitsContainer);
+        card.setAlignment(Pos.TOP_LEFT);
+        card.setPadding(new Insets(22));
+        card.setMaxWidth(LAYOUT_MAX_WIDTH);
+        card.setStyle(UiStyles.CARD);
+        return card;
+    }
+
+    private Node createOutfitCard(SavedOutfit outfit) {
+        Label nameLabel = new Label(outfit.displayName());
+        nameLabel.setWrapText(true);
+        nameLabel.setStyle(UiStyles.ITEM_TITLE);
+
+        Label metaLabel = new Label(createOutfitMeta(outfit));
+        metaLabel.setWrapText(true);
+        metaLabel.setStyle(UiStyles.MUTED_TEXT);
+
+        VBox titleBlock = new VBox(4, nameLabel, metaLabel);
+        titleBlock.setAlignment(Pos.TOP_LEFT);
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        HBox headerRow = new HBox(12, titleBlock, spacer, createOutfitActions(outfit));
+        headerRow.setAlignment(Pos.TOP_LEFT);
+
+        FlowPane pieces = new FlowPane(8, 8);
+        for (OutfitPiece piece : outfit.pieces()) {
+            pieces.getChildren().add(createPieceChip(piece));
+        }
+
+        VBox card = new VBox(12, headerRow, pieces);
+        card.setAlignment(Pos.TOP_LEFT);
+        card.setPadding(new Insets(16));
+        card.setMaxWidth(Double.MAX_VALUE);
+        card.setStyle(UiStyles.CARD);
+        return card;
+    }
+
+    private HBox createOutfitActions(SavedOutfit outfit) {
+        Button renameButton = new Button("Rename");
+        renameButton.setStyle(UiStyles.SMALL_INFO_BUTTON);
+        renameButton.setOnAction(event -> renameOutfit(outfit));
+
+        Button deleteButton = new Button("Delete");
+        deleteButton.setStyle(UiStyles.SMALL_DANGER_BUTTON);
+        deleteButton.setOnAction(event -> deleteOutfit(outfit));
+
+        HBox actions = new HBox(8, renameButton, deleteButton);
+        actions.setAlignment(Pos.CENTER_RIGHT);
+        return actions;
+    }
+
+    private Node createPieceChip(OutfitPiece piece) {
+        StackPane swatch = new StackPane();
+        swatch.setMinSize(12, 12);
+        swatch.setPrefSize(12, 12);
+        swatch.setMaxSize(12, 12);
+        swatch.setStyle(UiStyles.swatch(firstText(piece.mainColorHex(), DEFAULT_SWATCH_COLOR)));
+
+        Label label = new Label(firstText(piece.itemTitle(), "Item"));
+        label.setStyle(UiStyles.MUTED_TEXT);
+
+        Label slotLabel = new Label(firstText(piece.slotLabel(), ""));
+        slotLabel.setStyle(UiStyles.FIELD_LABEL);
+
+        HBox chip = new HBox(8, swatch, slotLabel, label);
+        chip.setAlignment(Pos.CENTER_LEFT);
+        chip.setPadding(new Insets(7, 10, 7, 10));
+        chip.setStyle(OUTFIT_PIECE_STYLE);
+        return chip;
+    }
+
+    private String createOutfitMeta(SavedOutfit outfit) {
+        StringBuilder meta = new StringBuilder("For " + outfit.feelsLike() + "°C feel");
+        meta.append(" · ").append(pluralizeItems(outfit.pieces().size()));
+        String savedAt = formatSavedAt(outfit.savedAt());
+        if (savedAt != null) {
+            meta.append(" · ").append(savedAt);
+        }
+        return meta.toString();
+    }
+
+    private String formatSavedAt(String savedAt) {
+        if (savedAt == null || savedAt.isBlank()) {
+            return null;
+        }
+        try {
+            return SAVED_AT_FORMAT.format(Instant.parse(savedAt));
+        } catch (RuntimeException exception) {
+            return null;
+        }
+    }
+
+    private void renameOutfit(SavedOutfit outfit) {
+        TextInputDialog dialog = new TextInputDialog(outfit.displayName());
+        dialog.setTitle("Rename outfit");
+        dialog.setHeaderText("Rename \"" + outfit.displayName() + "\"");
+        dialog.setContentText("Outfit name:");
+
+        Optional<String> result = dialog.showAndWait();
+        if (result.isEmpty()) {
+            return;
+        }
+
+        try {
+            outfitStore.rename(outfit.id(), result.get());
+            refreshOutfits();
+        } catch (IOException exception) {
+            showOutfitError("Could not rename outfit", exception.getMessage());
+        }
+    }
+
+    private void deleteOutfit(SavedOutfit outfit) {
+        Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION);
+        confirmation.setTitle("Delete outfit");
+        confirmation.setHeaderText("Delete \"" + outfit.displayName() + "\"?");
+        confirmation.setContentText("This only removes the saved outfit, not the clothes in your Library.");
+
+        Optional<ButtonType> result = confirmation.showAndWait();
+        if (result.isEmpty() || result.get() != ButtonType.OK) {
+            return;
+        }
+
+        try {
+            outfitStore.delete(outfit.id());
+            refreshOutfits();
+        } catch (IOException exception) {
+            showOutfitError("Could not delete outfit", exception.getMessage());
+        }
+    }
+
+    private void showOutfitError(String header, String message) {
+        Alert error = new Alert(Alert.AlertType.ERROR);
+        error.setTitle("Saved outfits");
+        error.setHeaderText(header);
+        error.setContentText(message);
+        error.showAndWait();
+    }
+
+    private Node createOutfitMessage(String message) {
+        Label messageLabel = new Label(message);
+        messageLabel.setWrapText(true);
+        messageLabel.setStyle(UiStyles.MUTED_TEXT);
+        return messageLabel;
     }
 
     private VBox createProfileCard() {
