@@ -28,6 +28,10 @@ import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * The application shell: holds the bottom navigation, swaps between the pages and
+ * applies the current colour theme across the window and its popups.
+ */
 public class AppRoot extends BorderPane {
     private static final double NAVIGATION_HEIGHT = 64;
 

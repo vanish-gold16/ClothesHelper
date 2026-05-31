@@ -32,6 +32,10 @@ public class OutfitMemoryStore {
         this.outfitsPath = projectRoot.resolve(MEMORY_DIRECTORY).resolve(OUTFITS_FILE);
     }
 
+    /**
+     * Appends {@code outfit} to the store with a fresh id and timestamp; any id or savedAt
+     * already on the outfit is ignored.
+     */
     public SavedOutfit save(SavedOutfit outfit) throws IOException {
         Instant savedAt = Instant.now();
         SavedOutfit stored = new SavedOutfit(
@@ -50,6 +54,7 @@ public class OutfitMemoryStore {
         return stored;
     }
 
+    /** Reads every saved outfit, newest first. */
     public List<SavedOutfit> loadAll() throws IOException {
         if (Files.notExists(outfitsPath)) {
             return new ArrayList<>();
@@ -71,6 +76,11 @@ public class OutfitMemoryStore {
         return outfits;
     }
 
+    /**
+     * Removes the outfit with {@code outfitId}.
+     *
+     * @return {@code true} if an outfit was removed
+     */
     public boolean delete(String outfitId) throws IOException {
         List<SavedOutfit> outfits = loadAll();
         boolean removed = outfits.removeIf(outfit -> outfit.id() != null && outfit.id().equals(outfitId));
@@ -80,6 +90,11 @@ public class OutfitMemoryStore {
         return removed;
     }
 
+    /**
+     * Changes the display name of the outfit with {@code outfitId}.
+     *
+     * @return {@code true} if the outfit was found and renamed
+     */
     public boolean rename(String outfitId, String newName) throws IOException {
         List<SavedOutfit> outfits = loadAll();
         boolean renamed = false;

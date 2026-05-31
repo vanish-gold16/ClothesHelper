@@ -36,6 +36,10 @@ public class ClothingMemoryStore {
         this.memoryRoot = projectRoot.resolve(MEMORY_DIRECTORY);
     }
 
+    /**
+     * Writes a new item: assigns a timestamped id, copies its photo, saves
+     * {@code item.json} and appends the item to the catalog.
+     */
     public StoredClothingItem save(ClothingItemDraft draft) throws IOException {
         Instant createdAt = Instant.now();
         String baseId = "item-" + ID_FORMATTER.format(createdAt);
@@ -59,6 +63,10 @@ public class ClothingMemoryStore {
         return new StoredClothingItem(id, itemJsonPath, photoPath);
     }
 
+    /**
+     * Reads every saved item from the catalog, newest first. Returns an empty list when
+     * nothing has been saved yet.
+     */
     public List<SavedClothingItem> loadAll() throws IOException {
         Path catalogPath = memoryRoot.resolve("catalog.json");
         if (Files.notExists(catalogPath)) {
@@ -86,6 +94,12 @@ public class ClothingMemoryStore {
         return items;
     }
 
+    /**
+     * Overwrites the item with {@code itemId} from {@code draft}, keeping its original id
+     * and creation time and updating its photo and catalog entry.
+     *
+     * @throws IOException if no item with that id exists
+     */
     public StoredClothingItem update(String itemId, ClothingItemDraft draft) throws IOException {
         String safeItemId = requireSafeItemId(itemId);
         SavedClothingItem existingItem = findItem(safeItemId);
@@ -110,6 +124,11 @@ public class ClothingMemoryStore {
         return new StoredClothingItem(safeItemId, itemJsonPath, photoPath);
     }
 
+    /**
+     * Removes the item's catalog entry and deletes its folder on disk.
+     *
+     * @return {@code true} if the item was present in the catalog
+     */
     public boolean delete(String itemId) throws IOException {
         String safeItemId = requireSafeItemId(itemId);
         boolean removedFromCatalog = removeCatalogEntry(safeItemId);

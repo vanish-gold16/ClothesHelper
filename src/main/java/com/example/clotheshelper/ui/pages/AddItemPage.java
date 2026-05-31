@@ -42,7 +42,7 @@ public class AddItemPage extends ScrollPane {
         VBox pageContent = new VBox(24,
                 new PageHeader(
                         "Add clothing item",
-                        "Fill in the basic details now. You can expand the enums later.",
+                        "Fill in the basic details",
                         LAYOUT_MAX_WIDTH
                 ),
                 notificationBanner,

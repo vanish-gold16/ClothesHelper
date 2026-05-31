@@ -22,14 +22,24 @@ public final class OutfitRecommendationService {
     private static final int MINIMUM_ACCEPTABLE_SCORE = 35;
     private static final int ROTATION_WINDOW = 80;
 
+    /**
+     * Builds the best outfit for the current weather, with no rotation or style preference.
+     */
     public Recommendation generate(List<SavedClothingItem> items, WeatherSnapshot weather) {
         return generate(items, weather, 0, OutfitPattern.RANDOM, OutfitStyle.ANY);
     }
 
+    /**
+     * Builds an outfit for the given {@code variant}, so repeated "Generate" presses can
+     * rotate between suitable pieces.
+     */
     public Recommendation generate(List<SavedClothingItem> items, WeatherSnapshot weather, int variant) {
         return generate(items, weather, variant, OutfitPattern.RANDOM, OutfitStyle.ANY);
     }
 
+    /**
+     * Builds an outfit for the given variant under a colour {@code pattern} (e.g. sandwich).
+     */
     public Recommendation generate(
             List<SavedClothingItem> items,
             WeatherSnapshot weather,
@@ -39,6 +49,18 @@ public final class OutfitRecommendationService {
         return generate(items, weather, variant, pattern, OutfitStyle.ANY);
     }
 
+    /**
+     * Builds an outfit by scoring every wardrobe item for the weather, the chosen
+     * {@code style} and {@code pattern}, then filling each slot of the layering plan.
+     *
+     * @param items   the wardrobe to choose from
+     * @param weather the conditions the outfit must suit
+     * @param variant {@code 0} returns the single best pick per slot; higher values draw a
+     *                weighted-random alternative so presses of "Generate" vary the result
+     * @param pattern an optional colour rule applied across slots
+     * @param style   the look to steer the outfit toward, or {@link OutfitStyle#ANY}
+     * @return the chosen pieces plus any slots that could not be filled
+     */
     public Recommendation generate(
             List<SavedClothingItem> items,
             WeatherSnapshot weather,

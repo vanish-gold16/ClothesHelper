@@ -13,6 +13,7 @@ import java.util.concurrent.CompletionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/** Fetches the current weather in Prague from the Open-Meteo API. */
 public final class PragueWeatherClient {
     private static final URI WEATHER_URI = URI.create(
             "https://api.open-meteo.com/v1/forecast"
@@ -30,6 +31,10 @@ public final class PragueWeatherClient {
             .connectTimeout(Duration.ofSeconds(6))
             .build();
 
+    /**
+     * Requests the current conditions asynchronously, off the JavaFX thread, and parses
+     * them into a {@link WeatherSnapshot}.
+     */
     public CompletableFuture<WeatherSnapshot> loadCurrentWeather() {
         HttpRequest request = HttpRequest.newBuilder(WEATHER_URI)
                 .timeout(Duration.ofSeconds(8))
