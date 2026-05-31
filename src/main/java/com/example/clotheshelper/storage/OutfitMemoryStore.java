@@ -14,9 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Persists outfits the user kept from the Home page. Outfits live in a single
- * {@code wardrobe-memory/outfits.json} array, reusing the same hand-written JSON
- * reader/writer as {@link ClothingMemoryStore}.
+ * Stores the outfits the user kept, in a single {@code wardrobe-memory/outfits.json} array.
  */
 public class OutfitMemoryStore {
     private static final String MEMORY_DIRECTORY = "wardrobe-memory";
@@ -34,10 +32,6 @@ public class OutfitMemoryStore {
         this.outfitsPath = projectRoot.resolve(MEMORY_DIRECTORY).resolve(OUTFITS_FILE);
     }
 
-    /**
-     * Saves {@code outfit}, assigning a fresh id and timestamp. Any id or savedAt on
-     * the incoming outfit is ignored.
-     */
     public SavedOutfit save(SavedOutfit outfit) throws IOException {
         Instant savedAt = Instant.now();
         SavedOutfit stored = new SavedOutfit(

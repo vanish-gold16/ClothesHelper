@@ -14,14 +14,12 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 
+/**
+ * Builds an outfit from the wardrobe by scoring each item against the weather,
+ * the chosen style and pattern, then filling the slots of a layering plan.
+ */
 public final class OutfitRecommendationService {
     private static final int MINIMUM_ACCEPTABLE_SCORE = 35;
-    // On regeneration, an item still has a chance of being chosen as long as it scores
-    // within this many points of the best item for the slot; further behind than this
-    // (clearly worse for the weather, or a clashing style) it never comes up. Wide enough
-    // to rotate between different sensible types (sneakers vs loafers on a warm day) and
-    // to keep adjacent-style items in the mix; the style-clash penalty (see styleScore)
-    // keeps clashing items beyond it.
     private static final int ROTATION_WINDOW = 80;
 
     public Recommendation generate(List<SavedClothingItem> items, WeatherSnapshot weather) {
@@ -59,8 +57,6 @@ public final class OutfitRecommendationService {
         Set<String> usedItemIds = new HashSet<>();
         boolean onePieceSelected = false;
         int safeVariant = Math.max(0, variant);
-        // For the sandwich pattern we remember the colour of the top once it is chosen,
-        // then steer the shoes toward it. The top is always scored before the shoes.
         String topColorHex = null;
 
         for (Slot slot : plan.slots()) {
@@ -155,9 +151,6 @@ public final class OutfitRecommendationService {
             if (score == Integer.MIN_VALUE) {
                 continue;
             }
-            // Required slots accept the best type-matching item even below the comfort
-            // threshold, so a usable base layer is never reported as missing just because
-            // its season tag is penalised. Optional slots stay conservative.
             if (!slot.required() && score < MINIMUM_ACCEPTABLE_SCORE) {
                 continue;
             }
@@ -171,19 +164,10 @@ public final class OutfitRecommendationService {
 
         candidates.sort(Comparator.comparingInt(ScoredItem::score).reversed());
 
-        // Variant 0 (the first view, and after any weather/style/pattern change) always
-        // shows the single best item for the slot.
         if (variant <= 0) {
             return Optional.of(candidates.get(0));
         }
 
-        // For each "Generate" press after the first, draw an item at random, weighted by
-        // score: the best is the most likely, close and adjacent-style items are still
-        // plausible, and anything more than ROTATION_WINDOW behind the best (clearly
-        // worse for the weather, or a clashing style) gets no weight at all. This way
-        // every slot that genuinely has an alternative can change - not just the shoes -
-        // while suitable pieces still come up most often. Slots with only one usable item
-        // keep returning it.
         return Optional.of(weightedChoice(candidates, slot, variant));
     }
 
@@ -202,8 +186,6 @@ public final class OutfitRecommendationService {
             cumulativeWeights[index] = totalWeight;
         }
 
-        // Seed by variant and slot so each press is a fresh draw, different slots vary
-        // independently, and the same variant always reproduces the same outfit.
         Random random = new Random(variant * 1_000_003L + slot.label().hashCode());
         long target = (long) (random.nextDouble() * totalWeight);
         for (int index = 0; index < candidates.size(); index++) {
@@ -252,9 +234,6 @@ public final class OutfitRecommendationService {
         return score;
     }
 
-    // Sandwich styling: reward shoes whose colour is close to the top's colour. The
-    // bonus fades smoothly with colour distance so an exact match wins, similar shades
-    // still get a nudge, and clashing colours get nothing.
     private int patternScore(SavedClothingItem item, Slot slot, OutfitPattern pattern, String topColorHex) {
         if (pattern != OutfitPattern.SANDWICH || slot.role() != Role.SHOES || topColorHex == null) {
             return 0;
@@ -639,8 +618,6 @@ public final class OutfitRecommendationService {
         return normalized;
     }
 
-    // An item can be tagged for several seasons; reward it for whichever fits the
-    // weather best so a "Hot, Warm" piece is not dragged down by its colder tag.
     private int bestSeasonScore(List<String> seasons, int feelsLike) {
         if (seasons.isEmpty()) {
             return 0;
@@ -736,8 +713,6 @@ public final class OutfitRecommendationService {
             if (isAny(type, "tshirt", "top", "shirt", "blouse", "dress", "skirt")) {
                 return 20;
             }
-            // Long bottoms are uncomfortable in real heat, so push them below shorts
-            // even when their season tag matches.
             if (isAny(type, "jeans", "pants")) {
                 return -10;
             }
@@ -866,19 +841,12 @@ public final class OutfitRecommendationService {
         };
     }
 
-    // Steers the whole outfit toward a chosen style by rewarding matching vibes.
-    // Styles sit on a spectrum (formal - shine - streetwear - sporty); a piece is scored
-    // by how far its vibe sits from the chosen style on that spectrum. The swing is wide
-    // on purpose so a clear clash (e.g. sporty sneakers under "Formal") loses to an
-    // on-style item even when the off-style one is a slightly better weather/type fit.
-    // Casual and cozy pieces are neutral fillers that work across looks.
     private int styleScore(String vibe, OutfitStyle style) {
         if (style == null || style == OutfitStyle.ANY || vibe == null) {
             return 0;
         }
 
         if ("casual".equals(vibe)) {
-            // Plain casual pieces blend into anything except the dressiest looks.
             return style == OutfitStyle.FORMAL ? -4 : 12;
         }
         if ("cozy".equals(vibe)) {
@@ -894,11 +862,6 @@ public final class OutfitRecommendationService {
             return 0;
         }
 
-        // Distance 0/1 stay within VARIETY_MARGIN of each other so the chosen style and
-        // its neighbour can be mixed and rotated. Distance 2/3 are pushed well past the
-        // margin - deep enough that a clashing piece stays out of the rotation even when
-        // the only on-style option scores low for the weather (e.g. formal boots in
-        // summer) - so it appears only when nothing on-style exists at all.
         return switch (Math.abs(styleRank - vibeRank)) {
             case 0 -> 70;
             case 1 -> 35;
@@ -907,7 +870,6 @@ public final class OutfitRecommendationService {
         };
     }
 
-    // Position of each style on the formal - shine - streetwear - sporty spectrum.
     private Integer stylePosition(OutfitStyle style) {
         return switch (style) {
             case FORMAL -> 0;
@@ -918,7 +880,6 @@ public final class OutfitRecommendationService {
         };
     }
 
-    // Position of a clothing vibe on the same spectrum, so it can be compared to a style.
     private Integer vibePosition(String vibe) {
         return switch (vibe) {
             case "elegant" -> 0;

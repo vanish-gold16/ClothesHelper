@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+/** Stores wardrobe items as JSON files under {@code wardrobe-memory/} and loads them back. */
 public class ClothingMemoryStore {
     private static final String MEMORY_DIRECTORY = "wardrobe-memory";
     private static final DateTimeFormatter ID_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS")
@@ -280,11 +281,6 @@ public class ClothingMemoryStore {
         return textValue(mapValue(map, key), "label");
     }
 
-    /**
-     * Reads a list of enum labels. Accepts the current array format as well as the
-     * legacy single-object ({@code {"value","label"}}) and plain-string formats so
-     * older wardrobe files keep loading.
-     */
     private List<String> labelListValue(Map<?, ?> map, String key) {
         if (map == null) {
             return List.of();

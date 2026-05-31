@@ -229,7 +229,6 @@ public class EditItemPage extends ScrollPane {
         try {
             Files.deleteIfExists(editedPhotoPath);
         } catch (IOException ignored) {
-            // The file is in the system temp directory and can be cleaned up later.
         }
     }
 

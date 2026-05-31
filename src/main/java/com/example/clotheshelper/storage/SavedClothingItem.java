@@ -28,12 +28,10 @@ public record SavedClothingItem(
         return photoPath != null;
     }
 
-    /** Comma-joined season labels for display and free-text search. */
     public String season() {
         return String.join(", ", seasons);
     }
 
-    /** Comma-joined occasion labels for display and free-text search. */
     public String wearOccasion() {
         return String.join(", ", wearOccasions);
     }

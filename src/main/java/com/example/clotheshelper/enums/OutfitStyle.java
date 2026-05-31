@@ -3,7 +3,6 @@ package com.example.clotheshelper.enums;
 import java.util.Locale;
 
 public enum OutfitStyle {
-    /** No styling constraint: pick whatever fits the weather. */
     ANY,
     FORMAL,
     SPORTY,

@@ -48,8 +48,6 @@ public class AppRoot extends BorderPane {
         setBottom(navigation);
         createPages(owner);
         applyTheme(currentTheme);
-        // The scene does not exist yet during construction, so publish the theme
-        // variables to it (so popups can resolve them) once it is attached.
         sceneProperty().addListener((observable, oldScene, newScene) -> publishThemeVariables(newScene));
         selectPage("Home");
     }
@@ -164,10 +162,6 @@ public class AppRoot extends BorderPane {
         updateNavigation(activePageName);
     }
 
-    // Inline styles set on this root are not visible to popups (context menus, tooltips)
-    // that live in their own scene. Publishing the same variables through a .root
-    // stylesheet rule lets those popups resolve the -app-* colours and avoids CSS
-    // warnings, while still following theme switches.
     private void publishThemeVariables(Scene scene) {
         if (scene == null) {
             return;

@@ -9,11 +9,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-/**
- * A dropdown that lets the user tick several enum values at once. JavaFX has no
- * built-in multi-select combo box, so this wraps a {@link MenuButton} with one
- * {@link CheckMenuItem} per value and shows the chosen labels on the button.
- */
+/** A dropdown that lets the user tick several enum values at once. */
 public class EnumMultiSelect<T extends Enum<T>> extends MenuButton {
     private final String promptText;
     private final List<T> values;
